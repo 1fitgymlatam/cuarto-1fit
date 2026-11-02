@@ -326,17 +326,25 @@
     c.putImageData(im, 0, 0);
   }
 
-  const SS = 2;   // la figura se dibuja al doble de resolución y luego se reduce (bordes suaves)
+  const SS = 1.5;   // la figura se dibuja a 1,5× y luego se reduce (bordes suaves)
+  // Las capas solo cubren el recuadro de la persona (150 cm de ancho), no todo el lienzo
+  let figW = 0, figH = 0, cacheFig = null, versionBrazo = 0;
   function capaNueva() {
-    const cv2 = document.createElement('canvas'); cv2.width = W * SS; cv2.height = H * SS;
+    const cv2 = document.createElement('canvas'); cv2.width = figW; cv2.height = figH;
     return cv2.getContext('2d', { willReadFrequently: true });
   }
 
   function dibujarFigura(b) {
+    const arriba = b.A + 6;                       // cm desde el piso hasta el borde superior del recuadro
+    const destino = [CX - 75 * PX, PISO_Y - arriba * PX, 150 * PX, (arriba + 3) * PX];
+    // Si nada del cuerpo cambió (solo textos, peso, fecha...), se reutiliza la figura ya dibujada
+    const clave = JSON.stringify([b, el('piel').value, el('luz').value, versionBrazo]);
+    if (cacheFig && cacheFig.clave === clave) { ctx.drawImage(cacheFig.canvas, ...destino); return; }
     const P2 = PX * SS;
-    const X = cm => (CX + cm * PX) * SS;
-    const yF = f => (PISO_Y - f * b.A * PX) * SS;
-    const frDe = y => (PISO_Y * SS - y) / (b.A * P2);
+    figW = Math.round(150 * P2); figH = Math.round((arriba + 3) * P2);
+    const X = cm => (75 + cm) * P2;
+    const yF = f => (arriba - f * b.A) * P2;
+    const frDe = y => (arriba * P2 - y) / (b.A * P2);
     const base = tonoBase(), muestra = brazo;
     const o = capaNueva();
     const hem = HEM[b.sexo];
@@ -347,7 +355,7 @@
     const cxL = X(-b.lc * 0.9), cxR = X(b.lc * 0.9);
     const C = { en: (y, k) => k === 'l' ? cxL : cxR };
     const D = b.thigh / 1.05;
-    dibujarPiernas(o, C, { yF, yHem: yF(hem), bot: PISO_Y * SS, ppc: P2, piel: base, muestra, sexo: b.sexo, D, G: b.calf, frontal: false, soloPies: false });
+    dibujarPiernas(o, C, { yF, yHem: yF(hem), bot: yF(0), ppc: P2, piel: base, muestra, sexo: b.sexo, D, G: b.calf, frontal: false, soloPies: false });
 
     // Torso
     const r = [
@@ -436,10 +444,11 @@
     }
 
     // Cuello y cabeza con cabello
-    dibujarCabeza(o, { cx: CX * SS, yF, ppc: P2, piel: base.map(v => v * 0.98), cuello: b.neck * 2 * Math.PI, baseY: yF(0.845) });
+    dibujarCabeza(o, { cx: X(0), yF, ppc: P2, piel: base.map(v => v * 0.98), cuello: b.neck * 2 * Math.PI, baseY: yF(0.845) });
 
+    cacheFig = { clave, canvas: o.canvas };
     ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(o.canvas, 0, 0, W, H);
+    ctx.drawImage(o.canvas, ...destino);
   }
 
   // Puntos del cuerpo donde llegan las líneas guía
@@ -929,7 +938,7 @@
       c.stroke();
     };
     c.save(); c.clip(camino); c.lineCap = 'round';
-    const nH = Math.round(rx * ry * 2.2);
+    const nH = Math.min(5000, Math.round(rx * ry * 0.9));
     for (let i = 0; i < nH; i++) {
       const x = cx + (Math.random() * 2 - 1) * rx * 1.1, y = hy + (Math.random() * 2.2 - 1.3) * ry;
       hebra(x, y, (0.5 + Math.random() * 0.7) * ppc, 0.35 + Math.random() * 0.45);
@@ -1046,7 +1055,7 @@
     };
   }
 
-  window.__cuarto = { cargarMascara: (c, mask) => { foto = analizarFoto(c, mask); cacheFoto = null; render(); } };
+  window.__cuarto = { cargarMascara: (c, mask) => { foto = analizarFoto(c, mask); cacheFoto = null; render(); }, render: () => render() };
 
   // ---------- Textos ----------
   function etiqueta(titulo, valor, lado, ySlot, punto, guias) {
@@ -1126,9 +1135,15 @@
   }
 
   // ---------- Eventos ----------
-  document.querySelectorAll('input, select').forEach(i => {
-    i.addEventListener('input', render);
-    i.addEventListener('change', render);
+  // Redibujo agrupado: mientras se escribe se espera un instante y se dibuja una sola vez
+  let pendiente = 0;
+  function pedirRender() {
+    clearTimeout(pendiente);
+    pendiente = setTimeout(() => requestAnimationFrame(render), 120);
+  }
+  document.querySelectorAll('input:not([type=file]), select').forEach(i => {
+    i.addEventListener('input', pedirRender);
+    i.addEventListener('change', pedirRender);
   });
   const estado = el('estadoFoto');
   const textoEstado = estado.textContent;
@@ -1161,9 +1176,9 @@
     const img = new Image();
     img.onload = () => {
       try {
-        brazo = muestraBrazo(img);
+        brazo = muestraBrazo(img); versionBrazo++;
         estadoBrazo.textContent = 'Tono tomado del brazo. Ajusta "Luz" si la foto salió muy clara u oscura.';
-      } catch (err) { brazo = null; estadoBrazo.textContent = err.message || String(err); }
+      } catch (err) { brazo = null; versionBrazo++; estadoBrazo.textContent = err.message || String(err); }
       render();
     };
     img.src = URL.createObjectURL(f);
@@ -1182,7 +1197,7 @@
     ['seudonimo'].concat(medidas).forEach(id => el(id).value = '');
     el('fecha').value = hoy();
     foto = null; el('foto').value = ''; estado.textContent = textoEstado;
-    brazo = null; el('brazo').value = ''; el('luz').value = 100; estadoBrazo.textContent = textoBrazo;
+    brazo = null; el('brazo').value = ''; el('luz').value = 100;  versionBrazo++; estadoBrazo.textContent = textoBrazo;
     render();
   });
 
