@@ -606,12 +606,13 @@
     const Dp = med('muslo') / Math.PI * ppc;
     const centros = centrosPiernas(f, pad, yHem, bot);
     const yEntre = yF(HEM[sexo] + 0.07), yCad = yF(HEM[sexo] + 0.10);
+    const cAn = centros ? centrosAnat(centros, yHem, yF(0.05), Dp) : null;
     // Límites del short entre la cadera y la bota: abertura entre piernas y bota ajustada al muslo
     function fueraDelShort(x, y) {
       if (!centros || y < yCad || y > yHem) return false;
-      const lc = centros.en(y, 'l'), rc = centros.en(y, 'r');
+      const lc = cAn.l.hem, rc = cAn.r.hem;
       const t = (y - yCad) / (yHem - yCad);
-      const ext = Dp * 0.5 + 2 * ppc;
+      const ext = Dp * 0.56 + 1 * ppc;
       const lim = ext * (1.6 - 0.6 * t);
       if (t > 0.05 && (x < lc - lim || x > rc + lim)) return true;
       if (y > yEntre) {
@@ -771,8 +772,8 @@
     const hem = HEM[sexo];
     // [fracción de estatura, semiancho externo, semiancho interno] en unidades del diámetro del muslo
     const perfil = [
-      [hem + 0.035, 0.53, 0.50], [hem, 0.51, 0.47], [0.37, 0.47, 0.42], [0.335, 0.42, 0.37],
-      [0.30, 0.37, 0.33], [0.28, 0.35, 0.315], [0.26, 0.34, 0.31], [0.235, 0.37, 0.355],
+      [hem + 0.035, 0.56, 0.52], [hem, 0.545, 0.495], [0.37, 0.50, 0.445], [0.335, 0.45, 0.39],
+      [0.30, 0.39, 0.34], [0.28, 0.36, 0.32], [0.26, 0.35, 0.315], [0.235, 0.375, 0.36],
       [0.21, 0.395, 0.40], [0.185, 0.375, 0.415], [0.16, 0.33, 0.37], [0.13, 0.27, 0.29],
       [0.10, 0.215, 0.225], [0.07, 0.19, 0.19], [0.05, 0.195, 0.20], [0.038, 0.215, 0.225]
     ];
@@ -796,13 +797,14 @@
 
     ['l', 'r'].forEach(k => {
       const s = k === 'l' ? -1 : 1;
-      const cHem = C.en(yHem, k), cAnk = C.en(yF(0.05), k);
+      const ca = centrosAnat(C, yHem, yF(0.05), Dp);
+      const cHem = soloPies ? C.en(yHem, k) : ca[k].hem, cAnk = soloPies ? C.en(yF(0.05), k) : ca[k].ank;
       // Eje anatómico: muslos que convergen a la rodilla, pierna casi vertical
       const eje = fr => {
         const t = clamp((hem + 0.035 - fr) / (hem + 0.035 - 0.05), 0, 1);
         const lin = cHem + (cAnk - cHem) * t;
         const rodilla = Math.sin(Math.PI * clamp((hem + 0.035 - fr) / (hem + 0.035 - 0.12), 0, 1)) * 0.05 * Dp;
-        return lin - s * rodilla + s * 0.03 * Dp * (1 - t);
+        return lin - s * rodilla;
       };
       const ext = [], int = [];
       filas.forEach(([fr, a, b, off]) => {
@@ -849,6 +851,7 @@
       }
       mc.putImageData(im, 0, yTop);
       if (frontal) dedos(mc, eje(0) + s * 0.06 * Dp, s, bot, Dp, yF(0) - yF(1), base);
+      else pieEspalda(mc, eje(0.05), s, bot, Dp, yF(0) - yF(1), base);
       // Vello: poco y fino, más en la pantorrilla que en el muslo
       if (!soloPies) {
         mc.save();
@@ -873,6 +876,32 @@
       }
       o.drawImage(m, 0, 0);
     });
+  }
+
+  // Muslos juntos como en un cuerpo real (no separados como las perneras del pantalón)
+  function centrosAnat(C, yHem, yAnk, Dp) {
+    const lh = C.en(yHem, 'l'), rh = C.en(yHem, 'r'), mid = (lh + rh) / 2, sep = Dp * 1.04;
+    const la = C.en(yAnk, 'l'), ra = C.en(yAnk, 'r'), amid = (la + ra) / 2, asep = clamp(ra - la, sep * 0.7, sep * 1.3);
+    return { l: { hem: mid - sep / 2, ank: amid - asep / 2 }, r: { hem: mid + sep / 2, ank: amid + asep / 2 } };
+  }
+
+  // Pie de espalda: además del talón se ven el borde externo y los dedos pequeños (pies un poco abiertos)
+  function pieEspalda(c, xa, s, bot, Dp, H, base) {
+    c.save(); c.globalCompositeOperation = 'destination-over';
+    const g = c.createLinearGradient(0, bot - 0.035 * H, 0, bot);
+    g.addColorStop(0, rgb(base, 0.96)); g.addColorStop(0.7, rgb(base, 0.9)); g.addColorStop(1, rgb(base, 0.76));
+    c.fillStyle = g;
+    // borde externo del pie: sube del piso hacia el tobillo, apenas por fuera del talón
+    c.beginPath();
+    c.moveTo(xa + s * 0.14 * Dp, bot - 0.03 * H);
+    c.bezierCurveTo(xa + s * 0.36 * Dp, bot - 0.03 * H, xa + s * 0.47 * Dp, bot - 0.018 * H, xa + s * 0.47 * Dp, bot - 0.007 * H);
+    c.quadraticCurveTo(xa + s * 0.47 * Dp, bot - 1, xa + s * 0.38 * Dp, bot - 1);
+    c.lineTo(xa + s * 0.1 * Dp, bot - 1);
+    c.closePath(); c.fill();
+    // dedo pequeño que asoma
+    c.fillStyle = rgb(base, 0.88);
+    c.beginPath(); c.ellipse(xa + s * 0.44 * Dp, bot - 0.005 * H, 0.055 * Dp, 0.005 * H, 0, 0, Math.PI * 2); c.fill();
+    c.restore();
   }
 
   // Cinco dedos vistos de frente, el grueso hacia adentro, con uñas y separaciones suaves
