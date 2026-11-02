@@ -58,6 +58,8 @@
             <option value="afro">Afro</option>
           </select>
         </label>
+        <div class="btns" style="margin:8px 0 4px"><button type="button" id="generarIA">Generar foto realista con IA</button></div>
+        <small id="estadoIA">Gemini crea una foto realista con este tono de piel y las medidas; luego se coloca en el cuarto a escala exacta. Tarda unos segundos.</small><br>
         <small id="estadoBrazo">Foto de cerca de la cara interna del antebrazo (la zona que menos sol recibe), con luz natural y sin flash. Con ese tono y su textura se arma todo el cuerpo.</small>
       </div>
     </fieldset>
@@ -1176,13 +1178,48 @@
     const img = new Image();
     img.onload = () => {
       try {
-        brazo = muestraBrazo(img); versionBrazo++;
+        brazo = muestraBrazo(img); versionBrazo++; brazoImg = img;
         estadoBrazo.textContent = 'Tono tomado del brazo. Ajusta "Luz" si la foto salió muy clara u oscura.';
       } catch (err) { brazo = null; versionBrazo++; estadoBrazo.textContent = err.message || String(err); }
       render();
     };
     img.src = URL.createObjectURL(f);
   });
+  // Foto realista con Gemini (vía la función /api/generar de Vercel, que guarda la clave)
+  let brazoImg = null;
+  function jpegBase64(img, lado) {
+    const k = Math.min(1, lado / Math.max(img.width, img.height));
+    const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', 0.85).split(',')[1];
+  }
+  el('generarIA').addEventListener('click', async () => {
+    const boton = el('generarIA'), est = el('estadoIA');
+    if (!num('altura')) { est.textContent = 'Escribe primero la estatura (y las demás medidas) para que la foto salga con su complexión.'; return; }
+    const medidas = {};
+    ['altura','cuello','hombros','biceps','cintura','cadera','muslo','gemelo'].forEach(id => { const v = num(id); if (v) medidas[id] = v; });
+    const tonos = { blanco: 'fair light skin', trigueno: 'medium tan olive skin', afro: 'dark brown skin' };
+    boton.disabled = true; est.textContent = 'Generando con Gemini… (10 a 30 segundos)';
+    try {
+      const r = await fetch('/api/generar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sexo: el('sexo').value, medidas, peso: num('peso'), piel: brazoImg ? jpegBase64(brazoImg, 512) : null, tono: tonos[el('piel').value] })
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.imagen) throw new Error(j.error || ('Error ' + r.status));
+      est.textContent = 'Foto recibida. Quitando el fondo y colocándola a escala…';
+      const img = new Image(); img.src = j.imagen; await img.decode();
+      foto = await procesarFoto(img); cacheFoto = null;
+      document.querySelector('input[name=modo][value=foto]').checked = true;
+      el('bloqueFoto').hidden = false; el('bloquePiel').hidden = true;
+      estado.textContent = 'Foto generada con IA, a escala exacta. Puedes volver a "Solo color de piel" para generar otra.';
+      est.textContent = 'Listo.';
+      render();
+    } catch (err) {
+      est.textContent = 'No se pudo generar: ' + (err.message || err);
+    } finally { boton.disabled = false; }
+  });
+
   el('quitarFoto').addEventListener('click', () => {
     foto = null; el('foto').value = ''; estado.textContent = textoEstado; render();
   });
