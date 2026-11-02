@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cuarto 1fit.life</title>
 <style>
-  :root { --bg:#ffffff; --ink:#1a1a1a; --muted:#666; --line:#dcdcdc; --accent:#e4572e; }
+  :root { --bg:#ffffff; --ink:#1a1a1a; --muted:#666; --line:#dcdcdc; }
   * { box-sizing:border-box; }
   body { margin:0; background:var(--bg); color:var(--ink); font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif; }
   header { padding:16px; border-bottom:1px solid var(--line); }
@@ -17,7 +17,7 @@
   fieldset { border:1px solid var(--line); border-radius:10px; margin:0 0 12px; padding:12px; }
   legend { font-weight:600; font-size:14px; padding:0 6px; }
   label { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:14px; margin:6px 0; }
-  input[type=text], input[type=number] { width:130px; padding:7px 8px; border:1px solid #ccc; border-radius:6px; font-size:15px; }
+  input[type=text], input[type=number], select { width:140px; padding:7px 8px; border:1px solid #ccc; border-radius:6px; font-size:15px; background:#fff; }
   input[type=range] { width:150px; }
   .btns { display:flex; flex-wrap:wrap; gap:8px; }
   button { padding:10px 14px; border-radius:8px; border:1px solid #1a1a1a; background:#1a1a1a; color:#fff; font-size:15px; cursor:pointer; }
@@ -29,36 +29,47 @@
 <body>
 <header>
   <h1>Cuarto de medición · 1fit.life</h1>
-  <p>Escribe los valores y se colocan solos en la plantilla. Luego descarga la imagen.</p>
+  <p>Escribe los datos de la persona: la figura y las medidas se dibujan solas. Luego descarga la imagen.</p>
 </header>
 
 <div class="wrap">
   <div class="panel">
     <fieldset>
-      <legend>Datos</legend>
-      <label>Seudónimo <input type="text" id="seudonimo" placeholder="Hormiga1000"></label>
-      <label>Fecha <input type="text" id="fecha" placeholder="01/11/26"></label>
+      <legend>Persona</legend>
+      <label>Seudónimo <input type="text" id="seudonimo"></label>
+      <label>Fecha <input type="text" id="fecha"></label>
+      <label>Sexo
+        <select id="sexo"><option value="m">Hombre</option><option value="f">Mujer</option></select>
+      </label>
+      <label>Tono de piel
+        <select id="piel">
+          <option value="blanco">Blanco</option>
+          <option value="trigueno">Trigueño</option>
+          <option value="afro">Afro</option>
+        </select>
+      </label>
     </fieldset>
 
     <fieldset>
       <legend>Medidas (cm)</legend>
-      <label>Estatura <input type="number" id="altura" step="0.5" placeholder="185"></label>
-      <label>Meta de estatura <input type="number" id="meta" step="0.5" placeholder="opcional"></label>
-      <label>Cuello <input type="number" id="cuello" step="0.5"></label>
-      <label>Hombros (perímetro) <input type="number" id="hombros" step="0.5"></label>
-      <label>Bíceps contraído <input type="number" id="biceps" step="0.5"></label>
-      <label>Cintura (ombligo) <input type="number" id="cintura" step="0.5"></label>
-      <label>Cadera (glúteo) <input type="number" id="cadera" step="0.5"></label>
-      <label>Muslo derecho <input type="number" id="muslo" step="0.5"></label>
+      <label>Estatura <input type="number" id="altura" step="0.5" inputmode="decimal"></label>
+      <label>Meta de estatura <input type="number" id="meta" step="0.5" inputmode="decimal"></label>
+      <label>Cuello <input type="number" id="cuello" step="0.5" inputmode="decimal"></label>
+      <label>Hombros (perímetro) <input type="number" id="hombros" step="0.5" inputmode="decimal"></label>
+      <label>Bíceps contraído <input type="number" id="biceps" step="0.5" inputmode="decimal"></label>
+      <label>Cintura (ombligo) <input type="number" id="cintura" step="0.5" inputmode="decimal"></label>
+      <label>Cadera (glúteo) <input type="number" id="cadera" step="0.5" inputmode="decimal"></label>
+      <label>Muslo derecho <input type="number" id="muslo" step="0.5" inputmode="decimal"></label>
+      <small>Los campos vacíos no se muestran; la figura usa una proporción promedio para ellos.</small>
     </fieldset>
 
     <fieldset>
-      <legend>Foto (opcional)</legend>
+      <legend>Foto real (opcional)</legend>
       <label>Subir foto <input type="file" id="foto" accept="image/*"></label>
       <label>Tamaño <input type="range" id="zoom" min="30" max="200" value="100"></label>
-      <label>Mover ↔ <input type="range" id="dx" min="-400" max="400" value="0"></label>
-      <label>Mover ↕ <input type="range" id="dy" min="-400" max="400" value="0"></label>
-      <small>La foto se ajusta para que la altura coincida con la regla. Usa los controles para afinar.</small>
+      <label>Mover ↔ <input type="range" id="dx" min="-500" max="500" value="0"></label>
+      <label>Mover ↕ <input type="range" id="dy" min="-500" max="500" value="0"></label>
+      <small>Si subes una foto, reemplaza a la figura dibujada.</small>
     </fieldset>
 
     <fieldset>
@@ -69,12 +80,12 @@
 
     <div class="btns">
       <button id="descargar">Descargar imagen</button>
-      <button class="sec" id="limpiar">Limpiar</button>
+      <button class="sec" id="limpiar">Nueva persona</button>
     </div>
   </div>
 
   <div class="stage">
-    <canvas id="cuarto" width="1100" height="1660"></canvas>
+    <canvas id="cuarto" width="1400" height="1660"></canvas>
   </div>
 </div>
 
@@ -84,78 +95,64 @@
   const ctx = cv.getContext('2d');
   const W = cv.width, H = cv.height;
 
-  // Geometría del cuarto
-  const PISO_Y = 1400;          // línea donde el piso toca la pared (0 cm)
-  const PX_CM = 6;              // 6 px = 1 cm  → 200 cm = 1200 px
-  const TOPE_Y = PISO_Y - 200 * PX_CM; // 200 cm
-  const CX = 550;               // centro del cuerpo
-  const yCm = cm => PISO_Y - cm * PX_CM;
+  // ---------- Geometría del cuarto ----------
+  const PISO_Y = 1400;                 // 0 cm
+  const PX = 6;                        // 6 px = 1 cm → 200 cm = 1200 px
+  const TOPE_Y = PISO_Y - 200 * PX;    // 200 cm
+  const CX = W / 2;                    // centro del cuerpo
+  const yCm = cm => PISO_Y - cm * PX;
 
-  const ids = ['seudonimo','fecha','altura','meta','cuello','hombros','biceps','cintura','cadera','muslo'];
   const el = id => document.getElementById(id);
+  const medidas = ['altura','meta','cuello','hombros','biceps','cintura','cadera','muslo'];
   let foto = null;
 
-  // Recordar valores en este navegador
-  try {
-    const g = JSON.parse(localStorage.getItem('cuarto1fit') || '{}');
-    ids.forEach(id => { if (g[id] !== undefined) el(id).value = g[id]; });
-  } catch (e) {}
-  if (!el('fecha').value) {
+  const PIEL = {
+    blanco:   { base:'#f0cfb4', sombra:'#d9ab8a' },
+    trigueno: { base:'#c8946b', sombra:'#a8744d' },
+    afro:     { base:'#7b4f35', sombra:'#5a3724' }
+  };
+  const PROMEDIO = {
+    m: { altura:172, cuello:38, hombros:115, biceps:31, cintura:86, cadera:98, muslo:54 },
+    f: { altura:160, cuello:32, hombros:100, biceps:27, cintura:74, cadera:98, muslo:54 }
+  };
+
+  function hoy() {
     const d = new Date();
-    el('fecha').value = String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getFullYear()).slice(2);
+    return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getFullYear()).slice(2);
   }
+  el('fecha').value = hoy();
 
-  function guardar() {
-    try {
-      const g = {}; ids.forEach(id => g[id] = el(id).value);
-      localStorage.setItem('cuarto1fit', JSON.stringify(g));
-    } catch (e) {}
-  }
-
-  const num = id => { const v = parseFloat(el(id).value); return isNaN(v) ? null : v; };
+  const num = id => { const v = parseFloat(el(id).value); return isNaN(v) || v <= 0 ? null : v; };
   const fmt = v => (Math.round(v * 10) / 10).toString().replace('.', ',');
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
-  // ---------- Dibujo ----------
+  // ---------- Cuarto ----------
   function pared() {
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
     const g = ctx.createLinearGradient(0, 0, 0, PISO_Y);
-    g.addColorStop(0, '#ffffff');
-    g.addColorStop(1, '#f2f2f2');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, PISO_Y);
+    g.addColorStop(0, '#ffffff'); g.addColorStop(1, '#f1f1f1');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, PISO_Y);
   }
 
   function piso() {
-    // Trapecio en perspectiva: fondo (pared) arriba, borde frontal abajo
-    const bL = 150, bR = 950, fL = 30, fR = 1070, fY = 1555;
+    const bL = 150, bR = 1250, fL = 20, fR = 1380, fY = 1555;
     ctx.fillStyle = '#fafafa';
-    ctx.beginPath();
-    ctx.moveTo(bL, PISO_Y); ctx.lineTo(bR, PISO_Y); ctx.lineTo(fR, fY); ctx.lineTo(fL, fY);
-    ctx.closePath(); ctx.fill();
-
-    ctx.strokeStyle = '#9a9a9a'; ctx.lineWidth = 1;
-    // Líneas que van hacia el fondo
-    const n = 28;
+    ctx.beginPath(); ctx.moveTo(bL, PISO_Y); ctx.lineTo(bR, PISO_Y); ctx.lineTo(fR, fY); ctx.lineTo(fL, fY); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#a0a0a0'; ctx.lineWidth = 1;
+    const n = 36;
     for (let i = 0; i <= n; i++) {
       const t = i / n;
-      ctx.beginPath();
-      ctx.moveTo(bL + (bR - bL) * t, PISO_Y);
-      ctx.lineTo(fL + (fR - fL) * t, fY);
-      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(bL + (bR - bL) * t, PISO_Y); ctx.lineTo(fL + (fR - fL) * t, fY); ctx.stroke();
     }
-    // Líneas horizontales (más juntas al fondo)
     const m = 12;
     for (let j = 0; j <= m; j++) {
       const t = Math.pow(j / m, 1.6);
       const y = PISO_Y + (fY - PISO_Y) * t;
-      const xl = bL + (fL - bL) * t, xr = bR + (fR - bR) * t;
-      ctx.beginPath(); ctx.moveTo(xl, y); ctx.lineTo(xr, y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(bL + (fL - bL) * t, y); ctx.lineTo(bR + (fR - bR) * t, y); ctx.stroke();
     }
-    // Regla del borde frontal 0–140 cm
     ctx.strokeStyle = '#555'; ctx.fillStyle = '#333';
     ctx.font = 'italic 22px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    const total = 140;
+    const total = 180;
     for (let c = 0; c <= total; c++) {
       const x = fL + (fR - fL) * (c / total);
       const largo = c % 10 === 0 ? 14 : (c % 5 === 0 ? 9 : 5);
@@ -166,7 +163,6 @@
   }
 
   function reglaVertical(x, ancho, lado) {
-    // Marco
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(x, TOPE_Y - 20, ancho, PISO_Y - TOPE_Y + 20);
     ctx.strokeStyle = '#b5b5b5'; ctx.lineWidth = 2;
@@ -186,12 +182,198 @@
     }
   }
 
+  // ---------- Figura humana ----------
+  function curvaCerrada(c, pts) {
+    const n = pts.length;
+    const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+    const m0 = mid(pts[n - 1], pts[0]);
+    c.beginPath(); c.moveTo(m0[0], m0[1]);
+    for (let i = 0; i < n; i++) {
+      const p = pts[i], m = mid(p, pts[(i + 1) % n]);
+      c.quadraticCurveTo(p[0], p[1], m[0], m[1]);
+    }
+    c.closePath(); c.fill();
+  }
+
+  // Extremidad a partir de puntos centrales [x, y, ancho] (en px)
+  function extremidad(c, centros) {
+    const izq = [], der = [];
+    for (let i = 0; i < centros.length; i++) {
+      const a = centros[Math.max(0, i - 1)], b = centros[Math.min(centros.length - 1, i + 1)];
+      let dx = b[0] - a[0], dy = b[1] - a[1];
+      const L = Math.hypot(dx, dy) || 1; dx /= L; dy /= L;
+      const nx = -dy, ny = dx, w = centros[i][2] / 2;
+      izq.push([centros[i][0] + nx * w, centros[i][1] + ny * w]);
+      der.push([centros[i][0] - nx * w, centros[i][1] - ny * w]);
+    }
+    curvaCerrada(c, izq.concat(der.reverse()));
+  }
+
+  // Calcula las dimensiones del cuerpo (cm) a partir de los datos
+  function cuerpo() {
+    const sexo = el('sexo').value;
+    const P = PROMEDIO[sexo];
+    const v = id => num(id) || P[id];
+    const A = clamp(v('altura'), 80, 200);
+    const k = A / P.altura;                 // si no hay medida, escalar el promedio con la estatura
+    const val = id => num(id) || P[id] * k;
+    const neck = clamp(val('cuello') / Math.PI / 2, 4, 12);
+    const sh   = clamp(val('hombros') / Math.PI / 2 * 1.05, 12, 34);
+    const waist= clamp(val('cintura') / Math.PI / 2 * 1.12, 8, 40);
+    const hip  = clamp(val('cadera') / Math.PI / 2 * 1.12, 10, 42);
+    const thigh= clamp(val('muslo') / Math.PI * 1.05, 8, 30);
+    const arm  = clamp(val('biceps') / Math.PI, 5, 20);
+    const chest= sh * (sexo === 'f' ? 0.84 : 0.9);
+    const lc   = Math.max(hip - thigh / 2, thigh / 2 + 0.5);
+    const sx   = sh - arm * 0.45;
+    return { sexo, A, neck, sh, waist, hip, thigh, arm, chest, lc, sx };
+  }
+
+  function dibujarFigura(b) {
+    const off = document.createElement('canvas');
+    off.width = W; off.height = H;
+    const c = off.getContext('2d');
+    const X = cm => CX + cm * PX;
+    const Y = f => PISO_Y - f * b.A * PX;
+    const piel = PIEL[el('piel').value];
+    c.fillStyle = piel.base;
+
+    // Piernas
+    [1, -1].forEach(s => {
+      const L = b.lc, T = b.thigh;
+      extremidad(c, [
+        [X(s * L), Y(0.52), T * PX * 1.0],
+        [X(s * L * 0.93), Y(0.42), T * PX * 0.88],
+        [X(s * L * 0.82), Y(0.31), T * PX * 0.6],
+        [X(s * L * 0.79), Y(0.27), T * PX * 0.56],
+        [X(s * L * 0.79), Y(0.20), T * PX * 0.6],
+        [X(s * L * 0.77), Y(0.10), T * PX * 0.38],
+        [X(s * L * 0.76), Y(0.045), T * PX * 0.3],
+        [X(s * L * 0.76), Y(0.02), T * PX * 0.32]
+      ]);
+      // Pie
+      c.beginPath();
+      c.ellipse(X(s * (L * 0.76 + 1.2)), PISO_Y - 2.5 * PX, T * PX * 0.3, 2.8 * PX, 0, 0, Math.PI * 2);
+      c.fill();
+    });
+
+    // Torso
+    const r = [
+      [b.neck, 0.86], [b.neck * 1.05, 0.84], [b.sh * 0.72, 0.828], [b.sh, 0.808],
+      [b.chest, 0.748], [b.chest * (b.sexo === 'f' ? 1.02 : 1), 0.715],
+      [b.waist, 0.62], [(b.waist + b.hip) / 2, 0.572], [b.hip, 0.525],
+      [b.hip * 0.96, 0.49], [1.2, 0.462]
+    ];
+    const torso = r.map(p => [X(p[0]), Y(p[1])])
+      .concat(r.slice().reverse().map(p => [X(-p[0]), Y(p[1])]));
+    curvaCerrada(c, torso);
+
+    // Brazos
+    [1, -1].forEach(s => {
+      const a = b.arm, x0 = b.sx;
+      extremidad(c, [
+        [X(s * x0), Y(0.812), a * PX * 1.08],
+        [X(s * (x0 + 1.8)), Y(0.75), a * PX],
+        [X(s * (x0 + 4.0)), Y(0.68), a * PX * 0.9],
+        [X(s * (x0 + 6.5)), Y(0.625), a * PX * 0.8],
+        [X(s * (x0 + 8.5)), Y(0.56), a * PX * 0.76],
+        [X(s * (x0 + 9.8)), Y(0.50), a * PX * 0.52],
+        [X(s * (x0 + 10.3)), Y(0.47), a * PX * 0.5]
+      ]);
+      c.beginPath();
+      c.ellipse(X(s * (x0 + 10.8)), Y(0.443), a * PX * 0.33, b.A * PX * 0.034, s * -0.12, 0, Math.PI * 2);
+      c.fill();
+    });
+
+    // Cuello y cabeza
+    extremidad(c, [[CX, Y(0.89), b.neck * 2 * PX * 0.95], [CX, Y(0.86), b.neck * 2 * PX * 0.95], [CX, Y(0.83), b.neck * 2 * PX * 1.15]]);
+    const ry = b.A * 0.062 * PX, rx = ry * 0.76, hy = Y(0.935);
+    c.beginPath(); c.ellipse(CX, hy, rx, ry, 0, 0, Math.PI * 2); c.fill();
+
+    // Sombreado suave (solo sobre la piel)
+    c.globalCompositeOperation = 'source-atop';
+    const g = c.createLinearGradient(X(-b.sx - b.arm - 12), 0, X(b.sx + b.arm + 12), 0);
+    g.addColorStop(0, piel.sombra); g.addColorStop(0.2, 'rgba(0,0,0,0)');
+    g.addColorStop(0.8, 'rgba(0,0,0,0)'); g.addColorStop(1, piel.sombra);
+    c.fillStyle = g; c.fillRect(0, 0, W, H);
+    c.globalCompositeOperation = 'source-over';
+
+    // Cabello (corto, sin rostro)
+    c.fillStyle = '#2b211c';
+    c.beginPath();
+    c.ellipse(CX, hy - ry * 0.12, rx * 1.04, ry * 0.95, 0, Math.PI, Math.PI * 2);
+    c.fill();
+    if (b.sexo === 'f') {
+      c.beginPath(); c.ellipse(CX, hy - ry * 1.02, rx * 0.42, ry * 0.3, 0, 0, Math.PI * 2); c.fill();
+    }
+
+    // Short negro
+    const t = b.waist + (b.hip - b.waist) * 0.47 + 0.5;
+    const hem = b.sexo === 'f' ? 0.43 : 0.40;
+    const cH = b.lc * (0.93 + (hem - 0.42) * 0.7), hwH = b.thigh * (0.88 + (hem - 0.42) * 1.2) / 2;
+    const sr = [[t, 0.578], [b.hip + 0.6, 0.525], [b.hip * 0.97 + 0.6, 0.48], [cH + hwH + 0.5, hem], [cH - hwH - 0.5, hem], [0, 0.458]];
+    c.fillStyle = '#111111';
+    c.beginPath();
+    sr.forEach((p, i) => i ? c.lineTo(X(p[0]), Y(p[1])) : c.moveTo(X(p[0]), Y(p[1])));
+    sr.slice(0, 5).reverse().forEach(p => c.lineTo(X(-p[0]), Y(p[1])));
+    c.closePath(); c.fill();
+    c.strokeStyle = '#3a3a3a'; c.lineWidth = 3;
+    c.beginPath(); c.moveTo(X(-t + 0.6), Y(0.566)); c.lineTo(X(t - 0.6), Y(0.566)); c.stroke();
+
+    // Top negro (mujeres)
+    if (b.sexo === 'f') {
+      const ch = b.chest + 0.5;
+      const wb = b.chest + (b.waist - b.chest) * 0.56 + 0.4;
+      c.fillStyle = '#111111';
+      c.beginPath();
+      c.moveTo(X(-ch), Y(0.765));
+      c.quadraticCurveTo(CX, Y(0.715), X(ch), Y(0.765));
+      c.lineTo(X(ch + 0.6), Y(0.72));
+      c.lineTo(X(wb), Y(0.675));
+      c.lineTo(X(-wb), Y(0.675));
+      c.lineTo(X(-ch - 0.6), Y(0.72));
+      c.closePath(); c.fill();
+      c.strokeStyle = '#111111'; c.lineWidth = 1.3 * PX; c.lineCap = 'round';
+      [1, -1].forEach(s => {
+        c.beginPath(); c.moveTo(X(s * ch * 0.6), Y(0.762)); c.lineTo(X(s * b.sh * 0.55), Y(0.828)); c.stroke();
+      });
+    }
+
+    ctx.drawImage(off, 0, 0);
+  }
+
+  // Puntos del cuerpo donde llegan las líneas guía
+  function anclas(b) {
+    const X = cm => CX + cm * PX;
+    const Y = f => PISO_Y - f * b.A * PX;
+    return {
+      cuello:  [X(-b.neck), Y(0.85)],
+      hombros: [X(-b.sh), Y(0.805)],
+      biceps:  [X(b.sx + 2.6 + b.arm / 2), Y(0.73)],
+      cintura: [X(b.waist), Y(0.62)],
+      cadera:  [X(-b.hip), Y(0.525)],
+      muslo:   [X(b.lc * 0.93 + b.thigh * 0.45), Y(0.44)]
+    };
+  }
+
+  function dibujarFoto(alt) {
+    const objetivo = (alt || 170) * PX * 1.06;
+    const esc = (objetivo / foto.height) * (el('zoom').value / 100);
+    const w = foto.width * esc, h = foto.height * esc;
+    const x = CX - w / 2 + parseFloat(el('dx').value);
+    const y = PISO_Y - h + parseFloat(el('dy').value);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(180, TOPE_Y - 20, W - 360, PISO_Y - TOPE_Y + 160); ctx.clip();
+    ctx.drawImage(foto, x, y, w, h);
+    ctx.restore();
+  }
+
+  // ---------- Textos ----------
   function flecha(x1, y1, x2, y2, color) {
     ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
     const a = Math.atan2(y2 - y1, x2 - x1);
-    ctx.beginPath();
-    ctx.moveTo(x2, y2);
+    ctx.beginPath(); ctx.moveTo(x2, y2);
     ctx.lineTo(x2 - 12 * Math.cos(a - 0.4), y2 - 12 * Math.sin(a - 0.4));
     ctx.lineTo(x2 - 12 * Math.cos(a + 0.4), y2 - 12 * Math.sin(a + 0.4));
     ctx.closePath(); ctx.fill();
@@ -200,90 +382,70 @@
   function marcaEstatura(cm, color, texto, abajo) {
     const y = yCm(Math.min(cm, 200));
     ctx.setLineDash([8, 6]); ctx.strokeStyle = color; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(230, y); ctx.lineTo(870, y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(172, y); ctx.lineTo(1228, y); ctx.stroke();
     ctx.setLineDash([]);
-    flecha(250, y, 232, y, color);
-    flecha(850, y, 868, y, color);
-    ctx.fillStyle = color; ctx.font = 'bold 24px Arial';
-    ctx.textAlign = 'center'; ctx.textBaseline = abajo ? 'top' : 'bottom';
-    ctx.fillText(texto, CX, abajo ? y + 6 : y - 6);
+    flecha(195, y, 173, y, color);
+    flecha(1205, y, 1227, y, color);
+    ctx.fillStyle = color; ctx.font = 'bold 26px Arial';
+    ctx.textBaseline = abajo ? 'top' : 'bottom';
+    [[200, 'left'], [1200, 'right']].forEach(([x, al]) => {
+      ctx.textAlign = al; ctx.fillText(texto, x, abajo ? y + 6 : y - 6);
+    });
   }
 
-  function etiqueta(titulo, valor, lado, ySlot, yCuerpo, guias) {
-    const xTxt = lado === 'izq' ? 260 : 640;
-    const anchoTxt = 230;
-    ctx.fillStyle = '#1a1a1a'; ctx.textBaseline = 'alphabetic';
-    ctx.textAlign = 'left';
-    ctx.font = '24px Arial';
-    ctx.fillText(titulo + ':', xTxt, ySlot);
-    ctx.font = 'bold 26px Arial';
-    ctx.fillText(fmt(valor) + ' cm', xTxt, ySlot + 30);
+  function etiqueta(titulo, valor, lado, ySlot, punto, guias) {
+    const ancho = 240;
+    const xTxt = lado === 'izq' ? 190 : W - 190 - ancho;
+    ctx.fillStyle = '#1a1a1a'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    ctx.font = '24px Arial'; ctx.fillText(titulo + ':', xTxt, ySlot, ancho);
+    ctx.font = 'bold 26px Arial'; ctx.fillText(fmt(valor) + ' cm', xTxt, ySlot + 30, ancho);
     ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(xTxt, ySlot + 40); ctx.lineTo(xTxt + anchoTxt, ySlot + 40); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(xTxt, ySlot + 40); ctx.lineTo(xTxt + ancho, ySlot + 40); ctx.stroke();
     if (guias) {
-      const desde = lado === 'izq' ? xTxt + anchoTxt : xTxt;
-      const hasta = lado === 'izq' ? CX - 40 : CX + 40;
-      ctx.strokeStyle = '#888'; ctx.lineWidth = 1.2;
-      ctx.beginPath(); ctx.moveTo(desde, ySlot + 40); ctx.lineTo(hasta, yCuerpo); ctx.stroke();
-      ctx.fillStyle = '#888';
-      ctx.beginPath(); ctx.arc(hasta, yCuerpo, 4, 0, Math.PI * 2); ctx.fill();
+      const desde = lado === 'izq' ? xTxt + ancho : xTxt;
+      ctx.strokeStyle = '#777'; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(desde, ySlot + 40); ctx.lineTo(punto[0], punto[1]); ctx.stroke();
+      ctx.fillStyle = '#e4572e';
+      ctx.beginPath(); ctx.arc(punto[0], punto[1], 5, 0, Math.PI * 2); ctx.fill();
     }
   }
 
-  function dibujarFoto(alt) {
-    if (!foto) return;
-    const objetivo = (alt || 175) * PX_CM * 1.06; // pequeño margen sobre la cabeza
-    const esc = (objetivo / foto.height) * (el('zoom').value / 100);
-    const w = foto.width * esc, h = foto.height * esc;
-    const x = CX - w / 2 + parseFloat(el('dx').value);
-    const y = PISO_Y - h + parseFloat(el('dy').value);
-    ctx.save();
-    ctx.beginPath(); ctx.rect(240, TOPE_Y - 20, 620, PISO_Y - TOPE_Y + 160); ctx.clip();
-    ctx.drawImage(foto, x, y, w, h);
-    ctx.restore();
-  }
-
+  // ---------- Render ----------
   function render() {
-    guardar();
     pared();
     piso();
-    const alt = num('altura');
-    dibujarFoto(alt);
-    reglaVertical(110, 110, 'izq');
-    reglaVertical(880, 110, 'der');
+    const b = cuerpo();
+    if (foto) dibujarFoto(num('altura')); else dibujarFigura(b);
+    reglaVertical(60, 110, 'izq');
+    reglaVertical(W - 170, 110, 'der');
 
-    // Encabezado
     ctx.fillStyle = '#1a1a1a'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-    ctx.font = 'bold 48px Arial';
-    ctx.fillText(el('seudonimo').value || '[ Seudónimo ]', W / 2, 70);
+    ctx.font = 'bold 50px Arial';
+    ctx.fillText(el('seudonimo').value || '[ Seudónimo ]', W / 2, 72);
     ctx.font = '36px Arial';
-    ctx.fillText('Fecha: ' + (el('fecha').value || 'DD/MM/AA'), W / 2, 118);
+    ctx.fillText('Fecha: ' + (el('fecha').value || 'DD/MM/AA'), W / 2, 120);
 
-    const guias = el('guias').checked;
-    const meta = num('meta');
+    const alt = num('altura'), meta = num('meta');
     if (meta) marcaEstatura(meta, '#2a7de1', 'Meta: ' + fmt(meta) + ' cm', !alt || meta <= alt);
     if (alt) marcaEstatura(alt, '#e4572e', 'Estatura: ' + fmt(alt) + ' cm', !!(meta && meta > alt));
 
-    // Alturas aproximadas del cuerpo según la estatura
-    const A = alt || 175;
+    const P = anclas(b);
     const lista = [
-      ['cuello',  'Cuello',            'izq', 0.865],
-      ['hombros', 'Perímetro hombros', 'izq', 0.82],
-      ['biceps',  'Bíceps contraído',  'der', 0.80],
-      ['cintura', 'Cintura (ombligo)', 'der', 0.60],
-      ['cadera',  'Cadera (glúteo)',   'izq', 0.52],
-      ['muslo',   'Muslo derecho',     'der', 0.42],
+      ['cuello',  'Perímetro cuello',  'izq'],
+      ['hombros', 'Perímetro hombros', 'izq'],
+      ['biceps',  'Bíceps contraído',  'der'],
+      ['cintura', 'Cintura (ombligo)', 'der'],
+      ['cadera',  'Cadera (glúteo)',   'izq'],
+      ['muslo',   'Muslo derecho',     'der']
     ];
-    const ocupados = { izq: [], der: [] };
-    lista.forEach(([id, titulo, lado, prop]) => {
+    const usados = { izq: [], der: [] };
+    const guias = el('guias').checked;
+    lista.forEach(([id, titulo, lado]) => {
       const v = num(id); if (v === null) return;
-      const yCuerpo = yCm(A * prop);
-      let ySlot = yCuerpo + 40;
-      // evitar que las etiquetas se monten
-      ocupados[lado].forEach(o => { if (Math.abs(o - ySlot) < 90) ySlot = o + 90; });
-      ySlot = Math.max(ySlot, TOPE_Y + 60);
-      ocupados[lado].push(ySlot);
-      etiqueta(titulo, v, lado, ySlot, yCuerpo, guias);
+      let ySlot = Math.max(P[id][1] + 10, TOPE_Y + 120);
+      usados[lado].forEach(o => { if (Math.abs(o - ySlot) < 85) ySlot = o + 85; });
+      usados[lado].push(ySlot);
+      etiqueta(titulo, v, lado, ySlot, P[id], guias);
     });
 
     if (el('sello').checked) {
@@ -291,14 +453,17 @@
       const s = String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear() +
                 ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
       ctx.fillStyle = '#333'; ctx.font = '22px Arial'; ctx.textAlign = 'right'; ctx.textBaseline = 'alphabetic';
-      ctx.fillText(s, 1060, 1640);
+      ctx.fillText(s, W - 40, 1640);
     }
     ctx.fillStyle = '#9a9a9a'; ctx.font = '18px Arial'; ctx.textAlign = 'left';
     ctx.fillText('1fit.life', 40, 1640);
   }
 
   // ---------- Eventos ----------
-  document.querySelectorAll('input').forEach(i => i.addEventListener('input', render));
+  document.querySelectorAll('input, select').forEach(i => {
+    i.addEventListener('input', render);
+    i.addEventListener('change', render);
+  });
   el('foto').addEventListener('change', e => {
     const f = e.target.files && e.target.files[0]; if (!f) return;
     const img = new Image();
@@ -313,10 +478,10 @@
     a.click();
   });
   el('limpiar').addEventListener('click', () => {
-    ids.forEach(id => { if (id !== 'fecha') el(id).value = ''; });
+    ['seudonimo'].concat(medidas).forEach(id => el(id).value = '');
+    el('fecha').value = hoy();
     foto = null; el('foto').value = '';
-    ['zoom'].forEach(id => el(id).value = 100);
-    ['dx','dy'].forEach(id => el(id).value = 0);
+    el('zoom').value = 100; el('dx').value = 0; el('dy').value = 0;
     render();
   });
 
