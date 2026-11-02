@@ -524,16 +524,40 @@
     if (bot < 0) throw new Error('No se detectó a la persona en la foto.');
     const piel = sn ? [sr / sn, sg / sn, sb / sn] : [200, 160, 130];
 
-    const ancho = y => { let a = -1, b = -1; const r = y * w; for (let x = 0; x < w; x++) if (mask[r + x]) { if (a < 0) a = x; b = x; } return a < 0 ? [0, 0, 0] : [b - a, a, b]; };
+    // Parte alta del tronco: se sube por el centro del cuerpo sin saltar huecos, así los brazos
+    // levantados (o manos sobre la cabeza separadas) no se confunden con el cuello o la cabeza
+    const topGlobal = top;
+    let px = 0, pn = 0;
+    const HsG = bot - topGlobal;
+    for (let y = Math.round(topGlobal + HsG * 0.4); y < topGlobal + HsG * 0.6; y += 2) for (let x = 0; x < w; x++) if (mask[y * w + x]) { px += x; pn++; }
+    const cxPre = pn ? px / pn : w / 2;
+    const banda = Math.max(3, Math.round(HsG * 0.03)), yMedio = Math.round(topGlobal + HsG * 0.45);
+    let topC = yMedio;
+    for (let x = Math.round(cxPre - banda); x <= cxPre + banda; x++) {
+      if (x < 0 || x >= w) continue;
+      let y = yMedio; if (!mask[y * w + x]) continue;
+      while (y > 0 && mask[(y - 1) * w + x]) y--;
+      if (y < topC) topC = y;
+    }
+    top = topC;
+    const brazosArriba = topGlobal < topC - HsG * 0.03;
+    // ancho del tramo continuo que contiene el centro (no suma brazos separados)
+    const ancho = y => {
+      const r = y * w; let a = Math.round(cxPre), b = a;
+      if (!mask[r + a]) return [0, a, a];
+      while (a > 0 && mask[r + a - 1]) a--; while (b < w - 1 && mask[r + b + 1]) b++;
+      return [b - a, a, b];
+    };
     const Hs = bot - top;
     let maxAncho = 1;
     for (let y = top; y < top + Hs * 0.35; y += 2) maxAncho = Math.max(maxAncho, ancho(y)[0]);
     const anchoArriba = ancho(Math.round(top + Hs * 0.06))[0];
     const conCabeza = nPelo + nCara > w * h * 0.0015 || anchoArriba / maxAncho < 0.55;
+    if (hairTop < top - HsG * 0.02 && !conCabeza) hairTop = h;   // cabello lejos del tronco: no cuenta
 
     // Coronilla: la real si hay cabeza; si la foto viene sin cabeza, se calcula desde la base del cuello
     let corona;
-    if (conCabeza) corona = hairTop < h ? Math.min(hairTop, top) : top;
+    if (conCabeza) corona = hairTop < h && hairTop >= top - Hs * 0.15 ? Math.min(hairTop, top) : top;
     else corona = bot - Hs / FR.baseCuello;
 
     // Centro del cuerpo (torso y cadera)
@@ -544,7 +568,7 @@
 
     // Centro del cuello (filas superiores de la silueta)
     let nx = 0, nn = 0;
-    for (let y = top; y < top + Math.max(3, Hs * 0.02); y++) for (let x = 0; x < w; x++) if (mask[y * w + x]) { nx += x; nn++; }
+    for (let y = top; y < top + Math.max(3, Hs * 0.02); y++) { const [, a, b] = ancho(y); for (let x = a; x <= b; x++) if (mask[y * w + x]) { nx += x; nn++; } }
     const cxCuello = nn ? nx / nn : cx;
 
     // Color de piel junto a la base del cuello (para completar cuello y cabeza sin costuras)
@@ -556,7 +580,7 @@
     const muestra = muestraPiel(c, mask, w, h, cx, bot, H);
     const frontal = nCara > w * h * 0.0008 && nCara > nPelo * 0.5;
     const rostro = nCara > 0 ? { x0: fx0, x1: fx1, y0: fy0, y1: fy1 } : null;
-    return { canvas: c, mask, w, h, top, bot, corona, cx, cxCuello, conCabeza, frontal, piel: muestra ? muestra.color : piel, pielCuello, muestra, rostro };
+    return { canvas: c, mask, w, h, top, bot, corona, cx, cxCuello, conCabeza, brazosArriba, frontal, piel: muestra ? muestra.color : piel, pielCuello, muestra, rostro };
   }
 
   const rgb = (p, f) => 'rgb(' + p.map(v => Math.round(clamp(v * f, 0, 255))).join(',') + ')';
@@ -1046,10 +1070,20 @@
       else { for (let x = F.w - 1; x >= 0; x--) if (en(x, y)) return [X(x), Y(y)]; }
       return null;
     }
+    // Bíceps: con los brazos levantados (pose de bíceps) el brazo está a la altura del hombro
+    function bicepsArriba() {
+      const y0 = Math.round(F.yF(0.90)), y1 = Math.round(F.yF(0.72));
+      let codo = -1;
+      for (let y = y0; y <= y1; y += 2) for (let x = F.w - 1; x > codo; x--) if (en(x, y)) { codo = x; break; }
+      if (codo < 0) return null;
+      const xm = Math.round((F.cx + F.semi.hombros * F.ppc + codo) / 2);
+      for (let y = y0; y <= y1; y++) if (en(xm, y)) return [X(xm), Y(y)];
+      return null;
+    }
     return {
       cuello:  borde(FR.cuello, -1, F.semi.cuello),
-      hombros: extremo(FR.hombros, -1),
-      biceps:  extremo(FR.biceps, 1),
+      hombros: borde(FR.hombros, -1, F.semi.hombros),
+      biceps:  (foto.brazosArriba && bicepsArriba()) || extremo(FR.biceps, 1),
       cintura: borde(FR.cintura, 1, F.semi.cintura),
       cadera:  borde(FR.cadera, -1, F.semi.cadera),
       muslo:   borde(FR.muslo, foto.frontal ? -1 : 1, F.semi.cadera * 0.95),
@@ -1156,7 +1190,9 @@
       estado.textContent = 'Procesando foto… (la primera vez tarda unos segundos)';
       try {
         foto = await procesarFoto(img); cacheFoto = null;
-        estado.textContent = num('altura') ? 'Foto lista, a escala exacta.' : 'Foto lista. Escribe la estatura para que quede a escala exacta.';
+        estado.textContent = (num('altura') ? 'Foto lista, a escala exacta.' : 'Foto lista. Escribe la estatura para que quede a escala exacta.')
+          + (foto.brazosArriba ? ' Aviso: la persona tiene los brazos levantados; para medir, lo ideal es brazos relajados a los lados.' : '')
+          + (!foto.conCabeza ? ' La foto no trae la cabeza: se completa y la estatura se calcula desde la base del cuello.' : '');
       } catch (err) {
         foto = null;
         estado.textContent = 'No se pudo procesar la foto: ' + (err && err.message ? err.message : err);
