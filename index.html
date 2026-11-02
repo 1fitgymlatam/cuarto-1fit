@@ -66,10 +66,9 @@
     <fieldset>
       <legend>Foto real (opcional)</legend>
       <label>Subir foto <input type="file" id="foto" accept="image/*"></label>
-      <label>Tamaño <input type="range" id="zoom" min="30" max="200" value="100"></label>
-      <label>Mover ↔ <input type="range" id="dx" min="-500" max="500" value="0"></label>
-      <label>Mover ↕ <input type="range" id="dy" min="-500" max="500" value="0"></label>
-      <small>Si subes una foto, reemplaza a la figura dibujada.</small>
+      <label>Tapar rostro <input type="checkbox" id="rostro" checked></label>
+      <label>Quitar foto <button type="button" class="sec" id="quitarFoto">Quitar</button></label>
+      <small id="estadoFoto">Se quita el fondo, la persona queda a escala exacta según la estatura y la ropa se pinta de negro. Foto de cuerpo entero, de la cabeza a los pies.</small>
     </fieldset>
 
     <fieldset>
@@ -356,16 +355,123 @@
     };
   }
 
-  function dibujarFoto(alt) {
-    const objetivo = (alt || 170) * PX * 1.06;
-    const esc = (objetivo / foto.height) * (el('zoom').value / 100);
-    const w = foto.width * esc, h = foto.height * esc;
-    const x = CX - w / 2 + parseFloat(el('dx').value);
-    const y = PISO_Y - h + parseFloat(el('dy').value);
+  // ---------- Foto real: quitar fondo y ropa negra ----------
+  const MP = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
+  const MODELO = 'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_multiclass_256x256/float32/latest/selfie_multiclass_256x256.tflite';
+  let segmentador = null;
+  async function obtenerSegmentador() {
+    if (segmentador) return segmentador;
+    const vision = await import(MP + '/vision_bundle.mjs');
+    const fs = await vision.FilesetResolver.forVisionTasks(MP + '/wasm');
+    segmentador = await vision.ImageSegmenter.createFromOptions(fs, {
+      baseOptions: { modelAssetPath: MODELO, delegate: 'CPU' },
+      runningMode: 'IMAGE', outputCategoryMask: true, outputConfidenceMasks: false
+    });
+    return segmentador;
+  }
+
+  // Categorías: 0 fondo, 1 cabello, 2 piel del cuerpo, 3 piel del rostro, 4 ropa, 5 accesorios
+  async function procesarFoto(img) {
+    const maxLado = 1600;
+    const k = Math.min(1, maxLado / Math.max(img.width, img.height));
+    const w = Math.round(img.width * k), h = Math.round(img.height * k);
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const g = c.getContext('2d', { willReadFrequently: true });
+    g.drawImage(img, 0, 0, w, h);
+
+    const seg = await obtenerSegmentador();
+    const res = seg.segment(c);
+    const m = res.categoryMask, mw = m.width, mh = m.height;
+    const raw = m.getAsUint8Array().slice();
+    m.close();
+    const cat = (x, y) => raw[Math.min(mh - 1, (y * mh / h) | 0) * mw + Math.min(mw - 1, (x * mw / w) | 0)];
+
+    const id = g.getImageData(0, 0, w, h), d = id.data;
+    const mask = new Uint8Array(w * h);
+    let sr = 0, sg = 0, sb = 0, sn = 0;
+    let top = h, bot = -1;
+    let fx0 = w, fx1 = -1, fy0 = h, fy1 = -1;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = y * w + x, cc = cat(x, y);
+      mask[i] = cc;
+      if (cc === 0) continue;
+      if (y < top) top = y; if (y > bot) bot = y;
+      if (cc === 2) { sr += d[i*4]; sg += d[i*4+1]; sb += d[i*4+2]; sn++; }
+      if (cc === 1 || cc === 3) { if (x < fx0) fx0 = x; if (x > fx1) fx1 = x; if (y < fy0) fy0 = y; if (y > fy1) fy1 = y; }
+    }
+    if (bot < 0) throw new Error('No se detectó a la persona en la foto.');
+    if (fy0 < h) top = fy0;   // la estatura se mide desde la coronilla, aunque los brazos estén levantados
+    const piel = sn ? [sr / sn, sg / sn, sb / sn] : [200, 160, 130];
+
+    for (let i = 0; i < w * h; i++) {
+      const cc = mask[i], p = i * 4;
+      if (cc === 0) { d[p+3] = 0; continue; }
+      if (cc === 4) {                       // ropa → negro con textura suave
+        const lum = 0.3 * d[p] + 0.59 * d[p+1] + 0.11 * d[p+2];
+        const v = 14 + lum * 0.09;
+        d[p] = d[p+1] = d[p+2] = v;
+      } else if (cc === 5) {                // reloj, lentes, pulsera → tono de piel
+        d[p] = piel[0]; d[p+1] = piel[1]; d[p+2] = piel[2];
+      }
+    }
+    g.putImageData(id, 0, 0);
+
+    // Centro del cuerpo (zona de la cadera y el torso)
+    let sx = 0, n = 0;
+    const r0 = top + (bot - top) * 0.3, r1 = top + (bot - top) * 0.6;
+    for (let y = r0 | 0; y < r1; y++) for (let x = 0; x < w; x++) if (mask[y * w + x]) { sx += x; n++; }
+    const cx = n ? sx / n : w / 2;
+    const rostro = fx1 >= 0 ? { x: (fx0 + fx1) / 2, y: (fy0 + fy1) / 2, r: Math.max(fx1 - fx0, fy1 - fy0) / 2 * 1.08 } : null;
+    return { canvas: c, mask, w, h, top, bot, cx, rostro };
+  }
+
+  // Ubicación exacta: de la coronilla a la planta = estatura en cm
+  function geomFoto() {
+    const alt = num('altura') || 170;
+    const esc = alt * PX / Math.max(1, foto.bot - foto.top);
+    const X = x => CX + (x - foto.cx) * esc;
+    const Y = y => PISO_Y - (foto.bot - y) * esc;
+    return { esc, X, Y };
+  }
+
+  function dibujarFoto() {
+    const { esc, X, Y } = geomFoto();
     ctx.save();
-    ctx.beginPath(); ctx.rect(180, TOPE_Y - 20, W - 360, PISO_Y - TOPE_Y + 160); ctx.clip();
-    ctx.drawImage(foto, x, y, w, h);
+    ctx.beginPath(); ctx.rect(172, 0, W - 344, PISO_Y + 200); ctx.clip();
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(foto.canvas, X(0), Y(0), foto.w * esc, foto.h * esc);
+    if (el('rostro').checked && foto.rostro) {
+      ctx.fillStyle = '#000';
+      ctx.beginPath(); ctx.arc(X(foto.rostro.x), Y(foto.rostro.y), foto.rostro.r * esc, 0, Math.PI * 2); ctx.fill();
+    }
     ctx.restore();
+  }
+
+  // Bordes reales del cuerpo en la foto para las líneas guía
+  function anclasFoto() {
+    const f = foto, { X, Y } = geomFoto();
+    const fila = fr => Math.round(f.bot - fr * (f.bot - f.top));
+    const cuerpoEn = (x, y) => x >= 0 && x < f.w && f.mask[y * f.w + x] !== 0;
+    function borde(fr, dir) {
+      const y = fila(fr); let x = Math.round(f.cx);
+      let pasos = 0;
+      while (!cuerpoEn(x, y) && pasos++ < f.w) x += dir;
+      while (cuerpoEn(x + dir, y)) x += dir;
+      return [X(x), Y(y)];
+    }
+    let bx = -1, by = fila(0.75);
+    for (let fr = 0.68; fr <= 0.86; fr += 0.01) {
+      const y = fila(fr);
+      for (let x = f.w - 1; x > bx; x--) if (cuerpoEn(x, y)) { bx = x; by = y; break; }
+    }
+    return {
+      cuello:  borde(0.85, -1),
+      hombros: borde(0.805, -1),
+      biceps:  bx >= 0 ? [X(bx), Y(by)] : borde(0.75, 1),
+      cintura: borde(0.62, 1),
+      cadera:  borde(0.525, -1),
+      muslo:   borde(0.44, 1)
+    };
   }
 
   // ---------- Textos ----------
@@ -415,7 +521,7 @@
     pared();
     piso();
     const b = cuerpo();
-    if (foto) dibujarFoto(num('altura')); else dibujarFigura(b);
+    if (foto) dibujarFoto(); else dibujarFigura(b);
     reglaVertical(60, 110, 'izq');
     reglaVertical(W - 170, 110, 'der');
 
@@ -429,7 +535,7 @@
     if (meta) marcaEstatura(meta, '#2a7de1', 'Meta: ' + fmt(meta) + ' cm', !alt || meta <= alt);
     if (alt) marcaEstatura(alt, '#e4572e', 'Estatura: ' + fmt(alt) + ' cm', !!(meta && meta > alt));
 
-    const P = anclas(b);
+    const P = foto ? anclasFoto() : anclas(b);
     const lista = [
       ['cuello',  'Perímetro cuello',  'izq'],
       ['hombros', 'Perímetro hombros', 'izq'],
@@ -464,11 +570,26 @@
     i.addEventListener('input', render);
     i.addEventListener('change', render);
   });
+  const estado = el('estadoFoto');
+  const textoEstado = estado.textContent;
   el('foto').addEventListener('change', e => {
     const f = e.target.files && e.target.files[0]; if (!f) return;
     const img = new Image();
-    img.onload = () => { foto = img; render(); };
+    img.onload = async () => {
+      estado.textContent = 'Procesando foto… (la primera vez tarda unos segundos)';
+      try {
+        foto = await procesarFoto(img);
+        estado.textContent = num('altura') ? 'Foto lista, a escala exacta.' : 'Foto lista. Escribe la estatura para que quede a escala exacta.';
+      } catch (err) {
+        foto = null;
+        estado.textContent = 'No se pudo procesar la foto: ' + (err && err.message ? err.message : err);
+      }
+      render();
+    };
     img.src = URL.createObjectURL(f);
+  });
+  el('quitarFoto').addEventListener('click', () => {
+    foto = null; el('foto').value = ''; estado.textContent = textoEstado; render();
   });
   el('descargar').addEventListener('click', () => {
     const a = document.createElement('a');
@@ -480,8 +601,7 @@
   el('limpiar').addEventListener('click', () => {
     ['seudonimo'].concat(medidas).forEach(id => el(id).value = '');
     el('fecha').value = hoy();
-    foto = null; el('foto').value = '';
-    el('zoom').value = 100; el('dx').value = 0; el('dy').value = 0;
+    foto = null; el('foto').value = ''; estado.textContent = textoEstado;
     render();
   });
 
