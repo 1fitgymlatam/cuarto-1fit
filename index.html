@@ -1,55 +1,327 @@
-from PIL import Image, ImageDraw, ImageFont
-import os
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cuarto 1fit.life</title>
+<style>
+  :root { --bg:#ffffff; --ink:#1a1a1a; --muted:#666; --line:#dcdcdc; --accent:#e4572e; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif; }
+  header { padding:16px; border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:20px; }
+  header p { margin:4px 0 0; color:var(--muted); font-size:14px; }
+  .wrap { display:flex; flex-wrap:wrap; gap:16px; padding:16px; }
+  .panel { flex:1 1 300px; max-width:420px; }
+  .stage { flex:2 1 420px; }
+  fieldset { border:1px solid var(--line); border-radius:10px; margin:0 0 12px; padding:12px; }
+  legend { font-weight:600; font-size:14px; padding:0 6px; }
+  label { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:14px; margin:6px 0; }
+  input[type=text], input[type=number] { width:130px; padding:7px 8px; border:1px solid #ccc; border-radius:6px; font-size:15px; }
+  input[type=range] { width:150px; }
+  .btns { display:flex; flex-wrap:wrap; gap:8px; }
+  button { padding:10px 14px; border-radius:8px; border:1px solid #1a1a1a; background:#1a1a1a; color:#fff; font-size:15px; cursor:pointer; }
+  button.sec { background:#fff; color:#1a1a1a; }
+  canvas { width:100%; height:auto; border:1px solid var(--line); border-radius:8px; background:#fff; display:block; }
+  small { color:var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Cuarto de medición · 1fit.life</h1>
+  <p>Escribe los valores y se colocan solos en la plantilla. Luego descarga la imagen.</p>
+</header>
 
-def crear_plantilla_fondo(output_path="plantilla_base.jpg"):
-    # Dimensiones estándar del lienzo
-    W, H = 1100, 1550
-    out = Image.new("RGB", (W, H), "white")
-    d = ImageDraw.Draw(out)
-    
-    # Cargar fuentes (con respaldo por defecto si no están disponibles)
-    try:
-        font_titulo = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 32)
-        font_texto = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 18)
-    except OSError:
-        font_titulo = ImageFont.load_default()
-        font_texto = ImageFont.load_default()
+<div class="wrap">
+  <div class="panel">
+    <fieldset>
+      <legend>Datos</legend>
+      <label>Seudónimo <input type="text" id="seudonimo" placeholder="Hormiga1000"></label>
+      <label>Fecha <input type="text" id="fecha" placeholder="01/11/26"></label>
+    </fieldset>
 
-    # 1. Cabecera (Seudónimo y Fecha)
-    d.text((W // 2, 45), "[ SEUDÓNIMO ]", font=font_titulo, fill="#999999", anchor="mm")
-    d.text((W // 2, 95), "Fecha: DD/MM/AAAA", font=font_texto, fill="#999999", anchor="mm")
+    <fieldset>
+      <legend>Medidas (cm)</legend>
+      <label>Estatura <input type="number" id="altura" step="0.5" placeholder="185"></label>
+      <label>Meta de estatura <input type="number" id="meta" step="0.5" placeholder="opcional"></label>
+      <label>Cuello <input type="number" id="cuello" step="0.5"></label>
+      <label>Hombros (perímetro) <input type="number" id="hombros" step="0.5"></label>
+      <label>Bíceps contraído <input type="number" id="biceps" step="0.5"></label>
+      <label>Cintura (ombligo) <input type="number" id="cintura" step="0.5"></label>
+      <label>Cadera (glúteo) <input type="number" id="cadera" step="0.5"></label>
+      <label>Muslo derecho <input type="number" id="muslo" step="0.5"></label>
+    </fieldset>
 
-    # 2. Marco contenedor para la fotografía corporal
-    area = (75, 180, 780, 1430)
-    d.rectangle(area, outline="#d0d0d0", width=2)
-    d.text((area[0] + 30, area[1] + 30), "Área de fotografía corporal", font=font_texto, fill="#b0b0b0")
+    <fieldset>
+      <legend>Foto (opcional)</legend>
+      <label>Subir foto <input type="file" id="foto" accept="image/*"></label>
+      <label>Tamaño <input type="range" id="zoom" min="30" max="200" value="100"></label>
+      <label>Mover ↔ <input type="range" id="dx" min="-400" max="400" value="0"></label>
+      <label>Mover ↕ <input type="range" id="dy" min="-400" max="400" value="0"></label>
+      <small>La foto se ajusta para que la altura coincida con la regla. Usa los controles para afinar.</small>
+    </fieldset>
 
-    # 3. Regla vertical derecha (Escala referencial)
-    ybottom = 1430
-    ytop = 210
-    cmmax = 190
-    for cm in range(0, cmmax + 1, 5):
-        y = round(ybottom - (cm / cmmax) * (ybottom - ytop))
-        d.line((790, y, 810 + (12 if cm % 10 == 0 else 0), y), fill="#888888", width=1)
-        if cm % 10 == 0:
-            d.text((835, y - 8), str(cm), font=font_texto, fill="#666666")
+    <fieldset>
+      <legend>Opciones</legend>
+      <label>Líneas guía al cuerpo <input type="checkbox" id="guias" checked></label>
+      <label>Sello de fecha y hora <input type="checkbox" id="sello" checked></label>
+    </fieldset>
 
-    # 4. Cuadrícula en perspectiva para la zona de los pies
-    floor_top = 1300
-    floor_bottom = 1430
-    # Líneas de profundidad horizontales
-    for i in range(6):
-        y = floor_top + i * 26
-        d.line((250 + i * 12, y, 780 - i * 12, y), fill="#e0e0e0", width=1)
-        
-    # Líneas convergentes en perspectiva
-    for x in range(250, 781, 50):
-        d.line((x, floor_top, 515 + (x - 515) * 0.15, floor_bottom), fill="#e0e0e0", width=1)
+    <div class="btns">
+      <button id="descargar">Descargar imagen</button>
+      <button class="sec" id="limpiar">Limpiar</button>
+    </div>
+  </div>
 
-    # Guardar imagen resultante
-    out.save(output_path, "JPEG", quality=95)
-    print(f"Plantilla generada y guardada correctamente en: {output_path}")
+  <div class="stage">
+    <canvas id="cuarto" width="1100" height="1660"></canvas>
+  </div>
+</div>
 
-if __name__ == "__main__":
-    crear_plantilla_fondo()
+<script>
+(function () {
+  const cv = document.getElementById('cuarto');
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
 
+  // Geometría del cuarto
+  const PISO_Y = 1400;          // línea donde el piso toca la pared (0 cm)
+  const PX_CM = 6;              // 6 px = 1 cm  → 200 cm = 1200 px
+  const TOPE_Y = PISO_Y - 200 * PX_CM; // 200 cm
+  const CX = 550;               // centro del cuerpo
+  const yCm = cm => PISO_Y - cm * PX_CM;
+
+  const ids = ['seudonimo','fecha','altura','meta','cuello','hombros','biceps','cintura','cadera','muslo'];
+  const el = id => document.getElementById(id);
+  let foto = null;
+
+  // Recordar valores en este navegador
+  try {
+    const g = JSON.parse(localStorage.getItem('cuarto1fit') || '{}');
+    ids.forEach(id => { if (g[id] !== undefined) el(id).value = g[id]; });
+  } catch (e) {}
+  if (!el('fecha').value) {
+    const d = new Date();
+    el('fecha').value = String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getFullYear()).slice(2);
+  }
+
+  function guardar() {
+    try {
+      const g = {}; ids.forEach(id => g[id] = el(id).value);
+      localStorage.setItem('cuarto1fit', JSON.stringify(g));
+    } catch (e) {}
+  }
+
+  const num = id => { const v = parseFloat(el(id).value); return isNaN(v) ? null : v; };
+  const fmt = v => (Math.round(v * 10) / 10).toString().replace('.', ',');
+
+  // ---------- Dibujo ----------
+  function pared() {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+    const g = ctx.createLinearGradient(0, 0, 0, PISO_Y);
+    g.addColorStop(0, '#ffffff');
+    g.addColorStop(1, '#f2f2f2');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, PISO_Y);
+  }
+
+  function piso() {
+    // Trapecio en perspectiva: fondo (pared) arriba, borde frontal abajo
+    const bL = 150, bR = 950, fL = 30, fR = 1070, fY = 1555;
+    ctx.fillStyle = '#fafafa';
+    ctx.beginPath();
+    ctx.moveTo(bL, PISO_Y); ctx.lineTo(bR, PISO_Y); ctx.lineTo(fR, fY); ctx.lineTo(fL, fY);
+    ctx.closePath(); ctx.fill();
+
+    ctx.strokeStyle = '#9a9a9a'; ctx.lineWidth = 1;
+    // Líneas que van hacia el fondo
+    const n = 28;
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      ctx.beginPath();
+      ctx.moveTo(bL + (bR - bL) * t, PISO_Y);
+      ctx.lineTo(fL + (fR - fL) * t, fY);
+      ctx.stroke();
+    }
+    // Líneas horizontales (más juntas al fondo)
+    const m = 12;
+    for (let j = 0; j <= m; j++) {
+      const t = Math.pow(j / m, 1.6);
+      const y = PISO_Y + (fY - PISO_Y) * t;
+      const xl = bL + (fL - bL) * t, xr = bR + (fR - bR) * t;
+      ctx.beginPath(); ctx.moveTo(xl, y); ctx.lineTo(xr, y); ctx.stroke();
+    }
+    // Regla del borde frontal 0–140 cm
+    ctx.strokeStyle = '#555'; ctx.fillStyle = '#333';
+    ctx.font = 'italic 22px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    const total = 140;
+    for (let c = 0; c <= total; c++) {
+      const x = fL + (fR - fL) * (c / total);
+      const largo = c % 10 === 0 ? 14 : (c % 5 === 0 ? 9 : 5);
+      ctx.beginPath(); ctx.moveTo(x, fY); ctx.lineTo(x, fY + largo); ctx.stroke();
+      if (c % 10 === 0) ctx.fillText(String(c), x, fY + 16);
+    }
+    ctx.beginPath(); ctx.moveTo(fL, fY); ctx.lineTo(fR, fY); ctx.stroke();
+  }
+
+  function reglaVertical(x, ancho, lado) {
+    // Marco
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x, TOPE_Y - 20, ancho, PISO_Y - TOPE_Y + 20);
+    ctx.strokeStyle = '#b5b5b5'; ctx.lineWidth = 2;
+    ctx.strokeRect(x, TOPE_Y - 20, ancho, PISO_Y - TOPE_Y + 20);
+    ctx.lineWidth = 1; ctx.strokeStyle = '#555'; ctx.fillStyle = '#333';
+    ctx.font = '22px Arial'; ctx.textBaseline = 'middle';
+    const borde = lado === 'izq' ? x + ancho : x;
+    const dir = lado === 'izq' ? -1 : 1;
+    for (let c = 0; c <= 200; c++) {
+      const y = yCm(c);
+      const largo = c % 10 === 0 ? 26 : (c % 5 === 0 ? 16 : 8);
+      ctx.beginPath(); ctx.moveTo(borde, y); ctx.lineTo(borde + dir * largo, y); ctx.stroke();
+      if (c % 10 === 0 && c > 0) {
+        ctx.textAlign = lado === 'izq' ? 'right' : 'left';
+        ctx.fillText(String(c), borde + dir * 32, y);
+      }
+    }
+  }
+
+  function flecha(x1, y1, x2, y2, color) {
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    const a = Math.atan2(y2 - y1, x2 - x1);
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - 12 * Math.cos(a - 0.4), y2 - 12 * Math.sin(a - 0.4));
+    ctx.lineTo(x2 - 12 * Math.cos(a + 0.4), y2 - 12 * Math.sin(a + 0.4));
+    ctx.closePath(); ctx.fill();
+  }
+
+  function marcaEstatura(cm, color, texto, abajo) {
+    const y = yCm(Math.min(cm, 200));
+    ctx.setLineDash([8, 6]); ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(230, y); ctx.lineTo(870, y); ctx.stroke();
+    ctx.setLineDash([]);
+    flecha(250, y, 232, y, color);
+    flecha(850, y, 868, y, color);
+    ctx.fillStyle = color; ctx.font = 'bold 24px Arial';
+    ctx.textAlign = 'center'; ctx.textBaseline = abajo ? 'top' : 'bottom';
+    ctx.fillText(texto, CX, abajo ? y + 6 : y - 6);
+  }
+
+  function etiqueta(titulo, valor, lado, ySlot, yCuerpo, guias) {
+    const xTxt = lado === 'izq' ? 260 : 640;
+    const anchoTxt = 230;
+    ctx.fillStyle = '#1a1a1a'; ctx.textBaseline = 'alphabetic';
+    ctx.textAlign = 'left';
+    ctx.font = '24px Arial';
+    ctx.fillText(titulo + ':', xTxt, ySlot);
+    ctx.font = 'bold 26px Arial';
+    ctx.fillText(fmt(valor) + ' cm', xTxt, ySlot + 30);
+    ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(xTxt, ySlot + 40); ctx.lineTo(xTxt + anchoTxt, ySlot + 40); ctx.stroke();
+    if (guias) {
+      const desde = lado === 'izq' ? xTxt + anchoTxt : xTxt;
+      const hasta = lado === 'izq' ? CX - 40 : CX + 40;
+      ctx.strokeStyle = '#888'; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(desde, ySlot + 40); ctx.lineTo(hasta, yCuerpo); ctx.stroke();
+      ctx.fillStyle = '#888';
+      ctx.beginPath(); ctx.arc(hasta, yCuerpo, 4, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  function dibujarFoto(alt) {
+    if (!foto) return;
+    const objetivo = (alt || 175) * PX_CM * 1.06; // pequeño margen sobre la cabeza
+    const esc = (objetivo / foto.height) * (el('zoom').value / 100);
+    const w = foto.width * esc, h = foto.height * esc;
+    const x = CX - w / 2 + parseFloat(el('dx').value);
+    const y = PISO_Y - h + parseFloat(el('dy').value);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(240, TOPE_Y - 20, 620, PISO_Y - TOPE_Y + 160); ctx.clip();
+    ctx.drawImage(foto, x, y, w, h);
+    ctx.restore();
+  }
+
+  function render() {
+    guardar();
+    pared();
+    piso();
+    const alt = num('altura');
+    dibujarFoto(alt);
+    reglaVertical(110, 110, 'izq');
+    reglaVertical(880, 110, 'der');
+
+    // Encabezado
+    ctx.fillStyle = '#1a1a1a'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.font = 'bold 48px Arial';
+    ctx.fillText(el('seudonimo').value || '[ Seudónimo ]', W / 2, 70);
+    ctx.font = '36px Arial';
+    ctx.fillText('Fecha: ' + (el('fecha').value || 'DD/MM/AA'), W / 2, 118);
+
+    const guias = el('guias').checked;
+    const meta = num('meta');
+    if (meta) marcaEstatura(meta, '#2a7de1', 'Meta: ' + fmt(meta) + ' cm', !alt || meta <= alt);
+    if (alt) marcaEstatura(alt, '#e4572e', 'Estatura: ' + fmt(alt) + ' cm', !!(meta && meta > alt));
+
+    // Alturas aproximadas del cuerpo según la estatura
+    const A = alt || 175;
+    const lista = [
+      ['cuello',  'Cuello',            'izq', 0.865],
+      ['hombros', 'Perímetro hombros', 'izq', 0.82],
+      ['biceps',  'Bíceps contraído',  'der', 0.80],
+      ['cintura', 'Cintura (ombligo)', 'der', 0.60],
+      ['cadera',  'Cadera (glúteo)',   'izq', 0.52],
+      ['muslo',   'Muslo derecho',     'der', 0.42],
+    ];
+    const ocupados = { izq: [], der: [] };
+    lista.forEach(([id, titulo, lado, prop]) => {
+      const v = num(id); if (v === null) return;
+      const yCuerpo = yCm(A * prop);
+      let ySlot = yCuerpo + 40;
+      // evitar que las etiquetas se monten
+      ocupados[lado].forEach(o => { if (Math.abs(o - ySlot) < 90) ySlot = o + 90; });
+      ySlot = Math.max(ySlot, TOPE_Y + 60);
+      ocupados[lado].push(ySlot);
+      etiqueta(titulo, v, lado, ySlot, yCuerpo, guias);
+    });
+
+    if (el('sello').checked) {
+      const d = new Date();
+      const s = String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear() +
+                ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+      ctx.fillStyle = '#333'; ctx.font = '22px Arial'; ctx.textAlign = 'right'; ctx.textBaseline = 'alphabetic';
+      ctx.fillText(s, 1060, 1640);
+    }
+    ctx.fillStyle = '#9a9a9a'; ctx.font = '18px Arial'; ctx.textAlign = 'left';
+    ctx.fillText('1fit.life', 40, 1640);
+  }
+
+  // ---------- Eventos ----------
+  document.querySelectorAll('input').forEach(i => i.addEventListener('input', render));
+  el('foto').addEventListener('change', e => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    const img = new Image();
+    img.onload = () => { foto = img; render(); };
+    img.src = URL.createObjectURL(f);
+  });
+  el('descargar').addEventListener('click', () => {
+    const a = document.createElement('a');
+    const nombre = (el('seudonimo').value || 'cuarto').replace(/[^\w-]+/g, '_');
+    a.download = nombre + '_' + (el('fecha').value || '').replace(/\//g, '-') + '.png';
+    a.href = cv.toDataURL('image/png');
+    a.click();
+  });
+  el('limpiar').addEventListener('click', () => {
+    ids.forEach(id => { if (id !== 'fecha') el(id).value = ''; });
+    foto = null; el('foto').value = '';
+    ['zoom'].forEach(id => el(id).value = 100);
+    ['dx','dy'].forEach(id => el(id).value = 0);
+    render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
