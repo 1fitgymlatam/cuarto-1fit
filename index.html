@@ -1,1 +1,55 @@
-<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><style type="text/css">@import url(https://themes.googleusercontent.com/fonts/css?kit=0o8j9u3oGMF5DPwGb0DO-7w8FwfhcjZFIJryzZb7Dlk);ol{margin:0;padding:0}table td,table th{padding:0}.c4{color:#000000;font-weight:400;text-decoration:none;vertical-align:baseline;font-size:11pt;font-family:"Arial";font-style:normal}.c2{color:#188038;font-weight:400;text-decoration:none;vertical-align:baseline;font-size:11pt;font-family:"Roboto Mono";font-style:normal}.c0{padding-top:0pt;padding-bottom:0pt;line-height:1.15;orphans:2;widows:2;text-align:left}.c3{background-color:#ffffff;max-width:451.4pt;padding:72pt 72pt 72pt 72pt}.c1{height:11pt}.c5{color:#188038}.title{padding-top:18pt;color:#000000;font-weight:700;font-size:12pt;padding-bottom:4pt;font-family:"Cambria";line-height:1.15;page-break-after:avoid;orphans:2;widows:2;text-align:left}.subtitle{padding-top:0pt;color:#666666;font-size:15pt;padding-bottom:16pt;font-family:"Arial";line-height:1.15;page-break-after:avoid;orphans:2;widows:2;text-align:left}li{color:#000000;font-size:11pt;font-family:"Arial"}p{margin:0;color:#000000;font-size:11pt;font-family:"Arial"}h1{padding-top:18pt;color:#000000;font-weight:700;font-size:12pt;padding-bottom:4pt;font-family:"Cambria";line-height:1.15;page-break-after:avoid;orphans:2;widows:2;text-align:left}h2{padding-top:18pt;color:#000000;font-size:16pt;padding-bottom:6pt;font-family:"Arial";line-height:1.15;page-break-after:avoid;orphans:2;widows:2;text-align:left}h3{padding-top:16pt;color:#434343;font-size:14pt;padding-bottom:4pt;font-family:"Arial";line-height:1.15;page-break-after:avoid;orphans:2;widows:2;text-align:left}h4{padding-top:14pt;color:#666666;font-size:12pt;padding-bottom:4pt;font-family:"Arial";line-height:1.15;page-break-after:avoid;orphans:2;widows:2;text-align:left}h5{padding-top:12pt;color:#666666;font-size:11pt;padding-bottom:4pt;font-family:"Arial";line-height:1.15;page-break-after:avoid;orphans:2;widows:2;text-align:left}h6{padding-top:12pt;color:#666666;font-size:11pt;padding-bottom:4pt;font-family:"Arial";line-height:1.15;page-break-after:avoid;font-style:italic;orphans:2;widows:2;text-align:left}</style></head><body class="c3 doc-content"><p class="c0"><span class="c4">index1.html</span></p><p class="c0"><span class="c5">&#60419;</span><span class="c2">from PIL import Image, ImageDraw, ImageFont</span></p><p class="c0"><span class="c2">import os</span></p><p class="c0 c1"><span class="c2"></span></p><p class="c0"><span class="c2">def crear_plantilla_fondo(output_path=&quot;plantilla_base.jpg&quot;):</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; # Dimensiones est&aacute;ndar del lienzo</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; W, H = 1100, 1550</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; out = Image.new(&quot;RGB&quot;, (W, H), &quot;white&quot;)</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; d = ImageDraw.Draw(out)</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; </span></p><p class="c0"><span class="c2">&nbsp; &nbsp; # Cargar fuentes (con respaldo por defecto si no est&aacute;n disponibles)</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; try:</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; &nbsp; &nbsp; font_titulo = ImageFont.truetype(&quot;/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf&quot;, 32)</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; &nbsp; &nbsp; font_texto = ImageFont.truetype(&quot;/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf&quot;, 18)</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; except OSError:</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; &nbsp; &nbsp; font_titulo = ImageFont.load_default()</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; &nbsp; &nbsp; font_texto = ImageFont.load_default()</span></p><p class="c0 c1"><span class="c2"></span></p><p class="c0"><span class="c2">&nbsp; &nbsp; # 1. Cabecera (Seud&oacute;nimo y Fecha)</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; d.text((W // 2, 45), &quot;[ SEUD&Oacute;NIMO ]&quot;, font=font_titulo, fill=&quot;#999999&quot;, anchor=&quot;mm&quot;)</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; d.text((W // 2, 95), &quot;Fecha: DD/MM/AAAA&quot;, font=font_texto, fill=&quot;#999999&quot;, anchor=&quot;mm&quot;)</span></p><p class="c0 c1"><span class="c2"></span></p><p class="c0"><span class="c2">&nbsp; &nbsp; # 2. Marco contenedor para la fotograf&iacute;a corporal</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; area = (75, 180, 780, 1430)</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; d.rectangle(area, outline=&quot;#d0d0d0&quot;, width=2)</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; d.text((area[0] + 30, area[1] + 30), &quot;&Aacute;rea de fotograf&iacute;a corporal&quot;, font=font_texto, fill=&quot;#b0b0b0&quot;)</span></p><p class="c0 c1"><span class="c2"></span></p><p class="c0"><span class="c2">&nbsp; &nbsp; # 3. Regla vertical derecha (Escala referencial)</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; ybottom = 1430</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; ytop = 210</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; cmmax = 190</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; for cm in range(0, cmmax + 1, 5):</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; &nbsp; &nbsp; y = round(ybottom - (cm / cmmax) * (ybottom - ytop))</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; &nbsp; &nbsp; d.line((790, y, 810 + (12 if cm % 10 == 0 else 0), y), fill=&quot;#888888&quot;, width=1)</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; &nbsp; &nbsp; if cm % 10 == 0:</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; d.text((835, y - 8), str(cm), font=font_texto, fill=&quot;#666666&quot;)</span></p><p class="c0 c1"><span class="c2"></span></p><p class="c0"><span class="c2">&nbsp; &nbsp; # 4. Cuadr&iacute;cula en perspectiva para la zona de los pies</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; floor_top = 1300</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; floor_bottom = 1430</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; # L&iacute;neas de profundidad horizontales</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; for i in range(6):</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; &nbsp; &nbsp; y = floor_top + i * 26</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; &nbsp; &nbsp; d.line((250 + i * 12, y, 780 - i * 12, y), fill=&quot;#e0e0e0&quot;, width=1)</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; &nbsp; &nbsp; </span></p><p class="c0"><span class="c2">&nbsp; &nbsp; # L&iacute;neas convergentes en perspectiva</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; for x in range(250, 781, 50):</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; &nbsp; &nbsp; d.line((x, floor_top, 515 + (x - 515) * 0.15, floor_bottom), fill=&quot;#e0e0e0&quot;, width=1)</span></p><p class="c0 c1"><span class="c2"></span></p><p class="c0"><span class="c2">&nbsp; &nbsp; # Guardar imagen resultante</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; out.save(output_path, &quot;JPEG&quot;, quality=95)</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; print(f&quot;Plantilla generada y guardada correctamente en: {output_path}&quot;)</span></p><p class="c0 c1"><span class="c2"></span></p><p class="c0"><span class="c2">if __name__ == &quot;__main__&quot;:</span></p><p class="c0"><span class="c2">&nbsp; &nbsp; crear_plantilla_fondo()</span></p><p class="c0"><span class="c5">&#60418;</span></p></body></html>
+from PIL import Image, ImageDraw, ImageFont
+import os
+
+def crear_plantilla_fondo(output_path="plantilla_base.jpg"):
+    # Dimensiones estándar del lienzo
+    W, H = 1100, 1550
+    out = Image.new("RGB", (W, H), "white")
+    d = ImageDraw.Draw(out)
+    
+    # Cargar fuentes (con respaldo por defecto si no están disponibles)
+    try:
+        font_titulo = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 32)
+        font_texto = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 18)
+    except OSError:
+        font_titulo = ImageFont.load_default()
+        font_texto = ImageFont.load_default()
+
+    # 1. Cabecera (Seudónimo y Fecha)
+    d.text((W // 2, 45), "[ SEUDÓNIMO ]", font=font_titulo, fill="#999999", anchor="mm")
+    d.text((W // 2, 95), "Fecha: DD/MM/AAAA", font=font_texto, fill="#999999", anchor="mm")
+
+    # 2. Marco contenedor para la fotografía corporal
+    area = (75, 180, 780, 1430)
+    d.rectangle(area, outline="#d0d0d0", width=2)
+    d.text((area[0] + 30, area[1] + 30), "Área de fotografía corporal", font=font_texto, fill="#b0b0b0")
+
+    # 3. Regla vertical derecha (Escala referencial)
+    ybottom = 1430
+    ytop = 210
+    cmmax = 190
+    for cm in range(0, cmmax + 1, 5):
+        y = round(ybottom - (cm / cmmax) * (ybottom - ytop))
+        d.line((790, y, 810 + (12 if cm % 10 == 0 else 0), y), fill="#888888", width=1)
+        if cm % 10 == 0:
+            d.text((835, y - 8), str(cm), font=font_texto, fill="#666666")
+
+    # 4. Cuadrícula en perspectiva para la zona de los pies
+    floor_top = 1300
+    floor_bottom = 1430
+    # Líneas de profundidad horizontales
+    for i in range(6):
+        y = floor_top + i * 26
+        d.line((250 + i * 12, y, 780 - i * 12, y), fill="#e0e0e0", width=1)
+        
+    # Líneas convergentes en perspectiva
+    for x in range(250, 781, 50):
+        d.line((x, floor_top, 515 + (x - 515) * 0.15, floor_bottom), fill="#e0e0e0", width=1)
+
+    # Guardar imagen resultante
+    out.save(output_path, "JPEG", quality=95)
+    print(f"Plantilla generada y guardada correctamente en: {output_path}")
+
+if __name__ == "__main__":
+    crear_plantilla_fondo()
+
