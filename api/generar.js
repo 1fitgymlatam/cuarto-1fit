@@ -75,7 +75,10 @@ module.exports = async (req, res) => {
     const r2 = await llamar(`${BASE}/interactions`, { model: MODELO, input: entrada, response_format: { type: 'image', aspect_ratio: '9:16' } }, clave);
     img = r2.ok ? sacarImagen(r2.j) : null;
     if (!img) {
-      const msg = (r.j.error && r.j.error.message) || (r2.j.error && r2.j.error.message) || 'Gemini no devolvió una imagen.';
+      let msg = (r.j.error && r.j.error.message) || (r2.j.error && r2.j.error.message) || 'Gemini no devolvió una imagen.';
+      if (r.status === 429 || /quota|free_tier/i.test(msg))
+        msg = 'La cuenta de Gemini no tiene cupo para imágenes: en el plan gratuito el límite es 0. Activa la facturación del proyecto en Google AI Studio y vuelve a intentar.';
+      else if (r.status === 400 && /API key/i.test(msg)) msg = 'La clave de Gemini no es válida. Revisa GEMINI_API_KEY en Vercel.';
       return res.status(502).json({ error: msg, estado: [r.status, r2.status] });
     }
   }
