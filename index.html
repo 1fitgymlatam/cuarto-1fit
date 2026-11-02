@@ -24,6 +24,8 @@
   button.sec { background:#fff; color:#1a1a1a; }
   canvas { width:100%; height:auto; border:1px solid var(--line); border-radius:8px; background:#fff; display:block; }
   small { color:var(--muted); }
+  .modos { display:flex; flex-direction:column; gap:6px; margin-bottom:8px; }
+  label.modo { justify-content:flex-start; gap:8px; font-weight:600; }
 </style>
 </head>
 <body>
@@ -35,23 +37,42 @@
 <div class="wrap">
   <div class="panel">
     <fieldset>
-      <legend>Persona</legend>
+      <legend>1. Imagen de la persona</legend>
+      <div class="modos">
+        <label class="modo"><input type="radio" name="modo" value="foto" checked> Foto real del cuerpo</label>
+        <label class="modo"><input type="radio" name="modo" value="piel"> Solo color de piel (foto del brazo)</label>
+      </div>
+      <div id="bloqueFoto">
+        <label>Subir foto <input type="file" id="foto" accept="image/*"></label>
+        <label>Tapar rostro <input type="checkbox" id="rostro" checked></label>
+        <label>Quitar foto <button type="button" class="sec" id="quitarFoto">Quitar</button></label>
+        <small id="estadoFoto">Foto limpia de cuerpo entero (sin dibujos ni textos encima). Se quita el fondo, queda a escala exacta según la estatura, con short negro y descalza; el rostro se difumina.</small>
+      </div>
+      <div id="bloquePiel" hidden>
+        <label>Foto del brazo <input type="file" id="brazo" accept="image/*"></label>
+        <label>Luz <input type="range" id="luz" min="80" max="120" value="100"></label>
+        <label>Tono si no hay foto
+          <select id="piel">
+            <option value="blanco">Blanco</option>
+            <option value="trigueno">Trigueño</option>
+            <option value="afro">Afro</option>
+          </select>
+        </label>
+        <small id="estadoBrazo">Foto de cerca de la cara interna del antebrazo (la zona que menos sol recibe), con luz natural y sin flash. Con ese tono y su textura se arma todo el cuerpo.</small>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>2. Persona</legend>
       <label>Seudónimo <input type="text" id="seudonimo"></label>
       <label>Fecha <input type="text" id="fecha"></label>
       <label>Sexo
         <select id="sexo"><option value="m">Hombre</option><option value="f">Mujer</option></select>
       </label>
-      <label>Tono de piel
-        <select id="piel">
-          <option value="blanco">Blanco</option>
-          <option value="trigueno">Trigueño</option>
-          <option value="afro">Afro</option>
-        </select>
-      </label>
     </fieldset>
 
     <fieldset>
-      <legend>Medidas (cm)</legend>
+      <legend>3. Medidas (cm)</legend>
       <label>Estatura <input type="number" id="altura" step="0.5" inputmode="decimal"></label>
       <label>Cuello <input type="number" id="cuello" step="0.5" inputmode="decimal"></label>
       <label>Hombros (perímetro) <input type="number" id="hombros" step="0.5" inputmode="decimal"></label>
@@ -62,14 +83,6 @@
       <label>Gemelo izquierdo <input type="number" id="gemelo" step="0.5" inputmode="decimal"></label>
       <label>Peso (kg) <input type="number" id="peso" step="0.1" inputmode="decimal"></label>
       <small>Los campos vacíos no se muestran; la figura usa una proporción promedio para ellos.</small>
-    </fieldset>
-
-    <fieldset>
-      <legend>Foto real (opcional)</legend>
-      <label>Subir foto <input type="file" id="foto" accept="image/*"></label>
-      <label>Tapar rostro <input type="checkbox" id="rostro" checked></label>
-      <label>Quitar foto <button type="button" class="sec" id="quitarFoto">Quitar</button></label>
-      <small id="estadoFoto">Se quita el fondo y la persona queda a escala exacta según la estatura. Queda solo con short negro, piernas descubiertas y descalza; el rostro se difumina de forma natural.</small>
     </fieldset>
 
     <fieldset>
@@ -158,36 +171,35 @@
     ctx.setLineDash([]);
   }
 
-  // Piso en perspectiva. En la línea donde se para la persona, 1 cm = PX (igual que las reglas verticales);
-  // el borde delantero es la misma escala proyectada, así que se lee igual siguiendo las líneas del piso.
+  // Piso en perspectiva (solo ambiente) y regla horizontal al pie de la persona, en su mismo plano:
+  // 1 cm = PX, igual que las reglas verticales. Lo que está justo encima de una marca se lee directo.
+  const X0 = CX - 90 * PX;                   // 0 cm de la regla horizontal (90 cm en el centro)
   function piso() {
-    const X0 = CX - 90 * PX;                 // 0 cm en el plano de la persona (90 cm en el centro)
-    const fY = 1555, fL = 20, fR = W - 20;
-    const K = (CX - fL) / (CX - X0);         // ampliación del borde delantero
+    const fY = 1590, fL = 20, fR = W - 20;
+    const K = (CX - fL) / (CX - X0);
     const xb = c => X0 + c * PX, xf = c => CX + (xb(c) - CX) * K;
     const gp = ctx.createLinearGradient(0, PISO_Y, 0, fY);
-    gp.addColorStop(0, '#f3f3f1'); gp.addColorStop(1, '#fcfcfb');
+    gp.addColorStop(0, '#f3f3f1'); gp.addColorStop(1, '#fdfdfc');
     ctx.fillStyle = gp;
     ctx.beginPath(); ctx.moveTo(xb(0), PISO_Y); ctx.lineTo(xb(180), PISO_Y); ctx.lineTo(xf(180), fY); ctx.lineTo(xf(0), fY); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = '#c9c9c9'; ctx.lineWidth = 1;
-    for (let c = 0; c <= 180; c += 5) {
-      ctx.beginPath(); ctx.moveTo(xb(c), PISO_Y); ctx.lineTo(xf(c), fY); ctx.stroke();
-    }
-    const m = 12;
-    for (let j = 0; j <= m; j++) {
-      const t = Math.pow(j / m, 1.6);
-      const y = PISO_Y + (fY - PISO_Y) * t;
+    ctx.strokeStyle = '#dedede'; ctx.lineWidth = 1;
+    for (let c = 0; c <= 180; c += 10) { ctx.beginPath(); ctx.moveTo(xb(c), PISO_Y); ctx.lineTo(xf(c), fY); ctx.stroke(); }
+    for (let j = 1; j <= 8; j++) {
+      const t = Math.pow(j / 8, 1.5), y = PISO_Y + (fY - PISO_Y) * t;
       ctx.beginPath(); ctx.moveTo(xb(0) + (xf(0) - xb(0)) * t, y); ctx.lineTo(xb(180) + (xf(180) - xb(180)) * t, y); ctx.stroke();
     }
-    ctx.strokeStyle = '#555'; ctx.fillStyle = '#333';
-    ctx.font = 'italic 22px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    // Regla horizontal (zócalo)
+    const xa = 172, xz = W - 172, alto = 46;
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(xa, PISO_Y, xz - xa, alto);
+    ctx.strokeStyle = '#b5b5b5'; ctx.lineWidth = 2; ctx.strokeRect(xa, PISO_Y, xz - xa, alto);
+    ctx.lineWidth = 1; ctx.strokeStyle = '#555'; ctx.fillStyle = '#333';
+    ctx.font = '20px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
     for (let c = 0; c <= 180; c++) {
-      const x = xf(c);
-      const largo = c % 10 === 0 ? 14 : (c % 5 === 0 ? 9 : 5);
-      ctx.beginPath(); ctx.moveTo(x, fY); ctx.lineTo(x, fY + largo); ctx.stroke();
-      if (c % 10 === 0) ctx.fillText(String(c), x, fY + 16);
+      const x = xb(c) + 0.5; if (x < xa || x > xz) continue;
+      const largo = c % 10 === 0 ? 16 : (c % 5 === 0 ? 10 : 5);
+      ctx.beginPath(); ctx.moveTo(x, PISO_Y); ctx.lineTo(x, PISO_Y + largo); ctx.stroke();
+      if (c % 10 === 0) ctx.fillText(String(c), x, PISO_Y + alto - 6);
     }
-    ctx.beginPath(); ctx.moveTo(xf(0), fY); ctx.lineTo(xf(180), fY); ctx.stroke();
   }
 
   function reglaVertical(x, ancho, lado) {
@@ -246,7 +258,7 @@
     const k = A / P.altura;                 // si no hay medida, escalar el promedio con la estatura
     const val = id => num(id) || P[id] * k;
     const neck = clamp(val('cuello') / Math.PI / 2, 4, 12);
-    const sh   = clamp(val('hombros') / Math.PI / 2 * 1.05, 12, 34);
+    const sh   = clamp(val('hombros') / 5.5, 12, 34);        // semiancho a nivel del deltoides
     const waist= clamp(val('cintura') / Math.PI / 2 * 1.12, 8, 40);
     const hip  = clamp(val('cadera') / Math.PI / 2 * 1.12, 10, 42);
     const thigh= clamp(val('muslo') / Math.PI * 1.05, 8, 30);
@@ -258,117 +270,176 @@
     return { sexo, A, neck, sh, waist, hip, thigh, arm, chest, lc, sx, calf };
   }
 
-  function dibujarFigura(b) {
-    const off = document.createElement('canvas');
-    off.width = W; off.height = H;
-    const c = off.getContext('2d');
-    const X = cm => CX + cm * PX;
-    const Y = f => PISO_Y - f * b.A * PX;
-    const piel = PIEL[el('piel').value];
-    c.fillStyle = piel.base;
+  // ---------- Modo "solo color de piel": cuerpo completo con el tono y la textura del brazo ----------
+  let brazo = null;          // { color, det, pw, ph } tomado de la foto del antebrazo
+  const PIEL_RGB = { blanco: [232, 196, 172], trigueno: [196, 148, 112], afro: [122, 82, 60] };
 
-    // Piernas
-    [1, -1].forEach(s => {
-      const L = b.lc, T = b.thigh;
-      extremidad(c, [
-        [X(s * L), Y(0.52), T * PX * 1.0],
-        [X(s * L * 0.93), Y(0.42), T * PX * 0.88],
-        [X(s * L * 0.82), Y(0.31), T * PX * 0.6],
-        [X(s * L * 0.79), Y(0.27), T * PX * 0.56],
-        [X(s * L * 0.79), Y(0.20), b.calf * PX * 0.95],
-        [X(s * L * 0.77), Y(0.10), T * PX * 0.38],
-        [X(s * L * 0.76), Y(0.045), T * PX * 0.3],
-        [X(s * L * 0.76), Y(0.02), T * PX * 0.32]
-      ]);
-      // Pie
-      c.beginPath();
-      c.ellipse(X(s * (L * 0.76 + 1.2)), PISO_Y - 2.5 * PX, T * PX * 0.3, 2.8 * PX, 0, 0, Math.PI * 2);
-      c.fill();
-    });
+  function muestraBrazo(img) {
+    const maxLado = 700, k = Math.min(1, maxLado / Math.max(img.width, img.height));
+    const w = Math.round(img.width * k), h = Math.round(img.height * k);
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    c.getContext('2d').drawImage(img, 0, 0, w, h);
+    const mask = new Uint8Array(w * h);
+    // Zona central de la foto, descartando lo que no parece piel (fondo, sombras duras, brillos)
+    const d = c.getContext('2d').getImageData(0, 0, w, h).data;
+    for (let y = Math.round(h * 0.2); y < h * 0.8; y++) for (let x = Math.round(w * 0.2); x < w * 0.8; x++) {
+      const i = y * w + x, r = d[i*4], g = d[i*4+1], b = d[i*4+2];
+      const lum = 0.3 * r + 0.59 * g + 0.11 * b;
+      if (r > g && g >= b * 0.8 && lum > 35 && lum < 245) mask[i] = 2;
+    }
+    const m = muestraPielZona(c, mask, w, h, Math.round(w * 0.2), Math.round(h * 0.2), Math.round(w * 0.8), Math.round(h * 0.8));
+    if (!m) throw new Error('No se reconoció piel en el centro de la foto. Acerca la cámara al brazo.');
+    return m;
+  }
+
+  function tonoBase() {
+    const luz = (parseFloat(el('luz').value) || 100) / 100;
+    const b = brazo ? brazo.color : PIEL_RGB[el('piel').value];
+    return b.map(v => clamp(v * luz, 0, 255));
+  }
+
+  // Sombreado por volumen de una parte del cuerpo (fila a fila), con textura de piel y extras anatómicos
+  function sombrearParte(c, base, muestra, yF0, extra) {
+    const W2 = c.canvas.width, H2 = c.canvas.height;
+    const im = c.getImageData(0, 0, W2, H2), p = im.data;
+    const mir = (i, n) => { i = ((i % (2 * n)) + 2 * n) % (2 * n); return i < n ? i : 2 * n - 1 - i; };
+    for (let y = 0; y < H2; y++) {
+      let a = -1, b = -1;
+      const fila = y * W2;
+      for (let x = 0; x < W2; x++) if (p[(fila + x) * 4 + 3] > 0) { if (a < 0) a = x; b = x; }
+      if (a < 0) continue;
+      const fr = yF0(y);
+      for (let x = a; x <= b; x++) {
+        const q = (fila + x) * 4; if (!p[q+3]) continue;
+        const u = (x - a) / Math.max(1, b - a);
+        let sh = 0.78 + 0.28 * Math.pow(Math.sin(Math.PI * u), 0.65) + 0.04 * (0.5 - u);
+        let tint = [1, 1, 1];
+        if (extra) { const e = extra(u, fr, x, y); sh *= e.s; if (e.t) tint = e.t; }
+        let dt = 1 + (Math.random() - 0.5) * 0.025;
+        if (muestra) dt *= muestra.det[mir(y, muestra.ph) * muestra.pw + mir(x, muestra.pw)];
+        const cal = 1 - sh;   // sombras de piel más cálidas (luz que atraviesa la piel), luces apenas más neutras
+        p[q]   = clamp(base[0] * sh * dt * tint[0] * (1 + cal * 0.16), 0, 255);
+        p[q+1] = clamp(base[1] * sh * dt * tint[1] * (1 + cal * 0.02), 0, 255);
+        p[q+2] = clamp(base[2] * sh * dt * tint[2] * (1 - cal * 0.14), 0, 255);
+      }
+    }
+    c.putImageData(im, 0, 0);
+  }
+
+  const SS = 2;   // la figura se dibuja al doble de resolución y luego se reduce (bordes suaves)
+  function capaNueva() {
+    const cv2 = document.createElement('canvas'); cv2.width = W * SS; cv2.height = H * SS;
+    return cv2.getContext('2d', { willReadFrequently: true });
+  }
+
+  function dibujarFigura(b) {
+    const P2 = PX * SS;
+    const X = cm => (CX + cm * PX) * SS;
+    const yF = f => (PISO_Y - f * b.A * PX) * SS;
+    const frDe = y => (PISO_Y * SS - y) / (b.A * P2);
+    const base = tonoBase(), muestra = brazo;
+    const o = capaNueva();
+    const hem = HEM[b.sexo];
+    const gauss = (v, m, s) => Math.exp(-Math.pow((v - m) / s, 2));
+    const rojo = k => [1 + 0.03 * k, 1 - 0.035 * k, 1 - 0.04 * k];
+
+    // Piernas y pies (mismo motor realista que el modo foto, vista de espalda)
+    const cxL = X(-b.lc * 0.9), cxR = X(b.lc * 0.9);
+    const C = { en: (y, k) => k === 'l' ? cxL : cxR };
+    const D = b.thigh / 1.05;
+    dibujarPiernas(o, C, { yF, yHem: yF(hem), bot: PISO_Y * SS, ppc: P2, piel: base, muestra, sexo: b.sexo, D, G: b.calf, frontal: false, soloPies: false });
 
     // Torso
     const r = [
-      [b.neck, 0.86], [b.neck * 1.05, 0.84], [b.sh * 0.72, 0.828], [b.sh, 0.808],
-      [b.chest, 0.748], [b.chest * (b.sexo === 'f' ? 1.02 : 1), 0.715],
-      [b.waist, 0.62], [(b.waist + b.hip) / 2, 0.572], [b.hip, 0.525],
-      [b.hip * 0.96, 0.49], [1.2, 0.462]
+      [b.neck * 1.05, 0.868], [b.neck * 1.3, 0.85], [b.sh * 0.55, 0.838], [b.sh * 0.8, 0.823],
+      [b.sh * 0.84, 0.795], [b.chest * 0.98, 0.75], [b.chest * 0.95, 0.71],
+      [b.waist, 0.62], [(b.waist + b.hip) / 2, 0.572], [b.hip, 0.525], [b.hip * 0.96, 0.49], [1.2, 0.462]
     ];
-    const torso = r.map(p => [X(p[0]), Y(p[1])])
-      .concat(r.slice().reverse().map(p => [X(-p[0]), Y(p[1])]));
-    curvaCerrada(c, torso);
+    const t = capaNueva(); t.fillStyle = '#fff';
+    curvaCerrada(t, r.map(p => [X(p[0]), yF(p[1])]).concat(r.slice().reverse().map(p => [X(-p[0]), yF(p[1])])));
+    sombrearParte(t, base, muestra, frDe, (u, fr) => {
+      let s = 1;
+      if (fr > 0.57 && fr < 0.81) s *= 1 - 0.07 * gauss(u, 0.5, 0.03);                         // surco de la columna
+      if (fr > 0.55 && fr < 0.72) s *= 1 + 0.035 * gauss(Math.abs(u - 0.5), 0.085, 0.045);       // músculos lumbares
+      s *= 1 + 0.04 * gauss(Math.abs(u - 0.5), 0.2, 0.08) * gauss(fr, 0.755, 0.035);             // omóplatos
+      s *= 1 - 0.035 * gauss(Math.abs(u - 0.5), 0.115, 0.02) * gauss(fr, 0.75, 0.04);            // borde interno del omóplato
+      if (fr > 0.79) s *= 1.03;                                                                    // luz sobre los hombros
+      return { s };
+    });
+    o.drawImage(t.canvas, 0, 0);
 
-    // Brazos
-    [1, -1].forEach(s => {
-      const a = b.arm, x0 = b.sx;
-      extremidad(c, [
-        [X(s * x0), Y(0.812), a * PX * 1.08],
-        [X(s * (x0 + 1.8)), Y(0.75), a * PX],
-        [X(s * (x0 + 4.0)), Y(0.68), a * PX * 0.9],
-        [X(s * (x0 + 6.5)), Y(0.625), a * PX * 0.8],
-        [X(s * (x0 + 8.5)), Y(0.56), a * PX * 0.76],
-        [X(s * (x0 + 9.8)), Y(0.50), a * PX * 0.52],
-        [X(s * (x0 + 10.3)), Y(0.47), a * PX * 0.5]
+    // Brazos y manos
+    [1, -1].forEach(sg => {
+      const a = b.arm * 0.92 * P2, x0 = b.sh - b.arm * 0.48;   // brazo relajado, cuelga pegado al torso
+      const ac = capaNueva(); ac.fillStyle = '#fff';
+      const xs = d => X(sg * (x0 + d));
+      const hw = a * 0.5;
+      // Hombro (deltoides) que nace del trapecio, brazo, codo, antebrazo y mano en una sola pieza
+      extremidad(ac, [
+        [xs(-3.4), yF(0.826), a * 0.3], [xs(-1.6), yF(0.818), a * 0.72], [xs(-0.1), yF(0.802), a * 1.0],
+        [xs(0.6), yF(0.78), a * 1.06], [xs(1.0), yF(0.745), a * 1.0], [xs(1.6), yF(0.705), a * 0.92],
+        [xs(2.3), yF(0.668), a * 0.78], [xs(2.9), yF(0.635), a * 0.7], [xs(3.6), yF(0.60), a * 0.79],
+        [xs(4.6), yF(0.555), a * 0.68], [xs(5.4), yF(0.515), a * 0.52], [xs(5.9), yF(0.49), a * 0.47],
+        [xs(6.2), yF(0.467), hw * 1.1], [xs(6.2), yF(0.442), hw * 1.08], [xs(5.8), yF(0.417), hw * 0.9],
+        [xs(5.2), yF(0.395), hw * 0.7], [xs(4.7), yF(0.384), hw * 0.4]
       ]);
-      c.beginPath();
-      c.ellipse(X(s * (x0 + 10.8)), Y(0.443), a * PX * 0.33, b.A * PX * 0.034, s * -0.12, 0, Math.PI * 2);
-      c.fill();
+      const hx = xs(6.2);
+      sombrearParte(ac, base, muestra, frDe, (u, fr) => {
+        let s = 1, k = 0;
+        k += gauss(fr, 0.632, 0.012) * 0.8;                       // codo
+        if (fr < 0.48) k += 0.7;                                    // mano un poco más rosada
+        s *= 1 + 0.05 * gauss(u, 0.45, 0.2) * gauss(fr, 0.71, 0.04); // tríceps
+        return { s, t: rojo(k) };
+      });
+      // Separación de los dedos
+      ac.save(); ac.globalCompositeOperation = 'source-atop';
+      ac.strokeStyle = 'rgba(70,40,28,0.28)'; ac.lineWidth = 1.2;
+      ac.lineWidth = 1.2 * SS;
+      for (let f = 1; f <= 2; f++) {
+        const fx = hx + sg * hw * (0.35 - f * 0.3);
+        ac.beginPath(); ac.moveTo(fx, yF(0.432)); ac.quadraticCurveTo(fx - sg * 0.8 * P2, yF(0.41), fx - sg * 2.2 * P2, yF(0.39)); ac.stroke();
+      }
+      // nudillos
+      ac.strokeStyle = 'rgba(70,40,28,0.18)';
+      ac.beginPath(); ac.moveTo(hx - hw * 0.45, yF(0.452)); ac.quadraticCurveTo(hx, yF(0.456), hx + hw * 0.45, yF(0.452)); ac.stroke();
+      ac.restore();
+      // sombra del brazo sobre el costado
+      o.save(); o.globalCompositeOperation = 'source-atop'; o.fillStyle = 'rgba(40,20,10,0.10)';
+      o.beginPath(); o.ellipse(X(sg * (x0 + 0.5)), yF(0.66), a * 0.35, b.A * P2 * 0.1, 0, 0, Math.PI * 2); o.fill(); o.restore();
+      o.drawImage(ac.canvas, 0, 0);
     });
 
-    // Cuello y cabeza
-    extremidad(c, [[CX, Y(0.89), b.neck * 2 * PX * 0.95], [CX, Y(0.86), b.neck * 2 * PX * 0.95], [CX, Y(0.83), b.neck * 2 * PX * 1.15]]);
-    const ry = b.A * 0.062 * PX, rx = ry * 0.76, hy = Y(0.935);
-    c.beginPath(); c.ellipse(CX, hy, rx, ry, 0, 0, Math.PI * 2); c.fill();
+    // Short negro con caída de tela
+    const tW = b.waist + (b.hip - b.waist) * 0.47 + 0.5;
+    const cH = b.lc * 0.9, hwH = D * 0.5 + 1.6;
+    const sr = [[tW, 0.578], [b.hip + 0.7, 0.525], [b.hip * 0.97 + 0.8, 0.48], [cH + hwH, hem], [cH - hwH + 0.6, hem], [0.4, 0.468]];
+    const sc = capaNueva();
+    const gs = sc.createLinearGradient(X(-b.hip), 0, X(b.hip), 0);
+    gs.addColorStop(0, '#0b0b0b'); gs.addColorStop(0.35, '#1c1c1c'); gs.addColorStop(0.65, '#161616'); gs.addColorStop(1, '#090909');
+    sc.fillStyle = gs; sc.beginPath();
+    sr.forEach((p, i) => i ? sc.lineTo(X(p[0]), yF(p[1])) : sc.moveTo(X(p[0]), yF(p[1])));
+    sr.slice(0, 5).reverse().forEach(p => sc.lineTo(X(-p[0]), yF(p[1])));
+    sc.closePath(); sc.fill();
+    sc.strokeStyle = 'rgba(255,255,255,0.08)'; sc.lineWidth = 3 * SS;
+    sc.beginPath(); sc.moveTo(X(-tW + 0.6), yF(0.567)); sc.lineTo(X(tW - 0.6), yF(0.567)); sc.stroke();
+    sc.strokeStyle = 'rgba(255,255,255,0.05)'; sc.lineWidth = 2;
+    sc.beginPath(); sc.moveTo(X(0), yF(0.565)); sc.quadraticCurveTo(X(0.3), yF(0.51), X(0), yF(0.47)); sc.stroke();
+    o.drawImage(sc.canvas, 0, 0);
 
-    // Sombreado suave (solo sobre la piel)
-    c.globalCompositeOperation = 'source-atop';
-    const g = c.createLinearGradient(X(-b.sx - b.arm - 12), 0, X(b.sx + b.arm + 12), 0);
-    g.addColorStop(0, piel.sombra); g.addColorStop(0.2, 'rgba(0,0,0,0)');
-    g.addColorStop(0.8, 'rgba(0,0,0,0)'); g.addColorStop(1, piel.sombra);
-    c.fillStyle = g; c.fillRect(0, 0, W, H);
-    c.globalCompositeOperation = 'source-over';
-
-    // Cabello (corto, sin rostro)
-    c.fillStyle = '#2b211c';
-    c.beginPath();
-    c.ellipse(CX, hy - ry * 0.12, rx * 1.04, ry * 0.95, 0, Math.PI, Math.PI * 2);
-    c.fill();
+    // Top negro (mujeres), vista de espalda: banda y tirantes
     if (b.sexo === 'f') {
-      c.beginPath(); c.ellipse(CX, hy - ry * 1.02, rx * 0.42, ry * 0.3, 0, 0, Math.PI * 2); c.fill();
+      o.fillStyle = '#121212';
+      const y1 = yF(0.748), y2 = yF(0.712), ch = b.chest + 0.4;
+      o.beginPath(); o.moveTo(X(-ch), y1); o.quadraticCurveTo(X(0), y1 + 6 * SS, X(ch), y1); o.lineTo(X(ch), y2); o.quadraticCurveTo(X(0), y2 + 4 * SS, X(-ch), y2); o.closePath(); o.fill();
+      o.strokeStyle = '#121212'; o.lineWidth = 1.4 * P2; o.lineCap = 'round';
+      [1, -1].forEach(sg => { o.beginPath(); o.moveTo(X(sg * b.chest * 0.55), y1); o.lineTo(X(sg * b.sh * 0.5), yF(0.832)); o.stroke(); });
     }
 
-    // Short negro
-    const t = b.waist + (b.hip - b.waist) * 0.47 + 0.5;
-    const hem = b.sexo === 'f' ? 0.43 : 0.40;
-    const cH = b.lc * (0.93 + (hem - 0.42) * 0.7), hwH = b.thigh * (0.88 + (hem - 0.42) * 1.2) / 2;
-    const sr = [[t, 0.578], [b.hip + 0.6, 0.525], [b.hip * 0.97 + 0.6, 0.48], [cH + hwH + 0.5, hem], [cH - hwH - 0.5, hem], [0, 0.458]];
-    c.fillStyle = '#111111';
-    c.beginPath();
-    sr.forEach((p, i) => i ? c.lineTo(X(p[0]), Y(p[1])) : c.moveTo(X(p[0]), Y(p[1])));
-    sr.slice(0, 5).reverse().forEach(p => c.lineTo(X(-p[0]), Y(p[1])));
-    c.closePath(); c.fill();
-    c.strokeStyle = '#3a3a3a'; c.lineWidth = 3;
-    c.beginPath(); c.moveTo(X(-t + 0.6), Y(0.566)); c.lineTo(X(t - 0.6), Y(0.566)); c.stroke();
+    // Cuello y cabeza con cabello
+    dibujarCabeza(o, { cx: CX * SS, yF, ppc: P2, piel: base.map(v => v * 0.98), cuello: b.neck * 2 * Math.PI, baseY: yF(0.845) });
 
-    // Top negro (mujeres)
-    if (b.sexo === 'f') {
-      const ch = b.chest + 0.5;
-      const wb = b.chest + (b.waist - b.chest) * 0.56 + 0.4;
-      c.fillStyle = '#111111';
-      c.beginPath();
-      c.moveTo(X(-ch), Y(0.765));
-      c.quadraticCurveTo(CX, Y(0.715), X(ch), Y(0.765));
-      c.lineTo(X(ch + 0.6), Y(0.72));
-      c.lineTo(X(wb), Y(0.675));
-      c.lineTo(X(-wb), Y(0.675));
-      c.lineTo(X(-ch - 0.6), Y(0.72));
-      c.closePath(); c.fill();
-      c.strokeStyle = '#111111'; c.lineWidth = 1.3 * PX; c.lineCap = 'round';
-      [1, -1].forEach(s => {
-        c.beginPath(); c.moveTo(X(s * ch * 0.6), Y(0.762)); c.lineTo(X(s * b.sh * 0.55), Y(0.828)); c.stroke();
-      });
-    }
-
-    ctx.drawImage(off, 0, 0);
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(o.canvas, 0, 0, W, H);
   }
 
   // Puntos del cuerpo donde llegan las líneas guía
@@ -378,11 +449,11 @@
     return {
       cuello:  [X(-b.neck), Y(0.85)],
       hombros: [X(-b.sh), Y(0.805)],
-      biceps:  [X(b.sx + 2.6 + b.arm / 2), Y(0.73)],
+      biceps:  [X(b.sh - b.arm * 0.48 + 1.2 + b.arm * 0.45), Y(0.725)],
       cintura: [X(b.waist), Y(0.62)],
       cadera:  [X(-b.hip), Y(0.525)],
       muslo:   [X(b.lc * 0.93 + b.thigh * 0.45), Y(0.44)],
-      gemelo:  [X(-(b.lc * 0.79 + b.calf * 0.47)), Y(0.20)]
+      gemelo:  [X(-(b.lc * 0.9 + b.calf * 0.45)), Y(0.195)]
     };
   }
 
@@ -626,6 +697,11 @@
     const y0 = Math.round(bot - 0.75 * H), y1 = Math.round(bot - 0.63 * H);
     const half = Math.round(0.045 * H);
     const x0 = Math.max(0, Math.round(cx - half)), x1 = Math.min(w - 1, Math.round(cx + half));
+    return muestraPielZona(c, mask, w, h, x0, y0, x1, y1);
+  }
+
+  function muestraPielZona(c, mask, w, h, x0, y0, x1, y1) {
+    const d = c.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
     const pw = x1 - x0 + 1, ph = y1 - y0 + 1;
     if (pw < 8 || ph < 8 || y0 < 0) return null;
     const R = [], G = [], B = [];
@@ -732,9 +808,8 @@
             dt = muestra.det[mir(y, muestra.ph) * muestra.pw + mir(x + (k === 'l' ? 0 : 37), muestra.pw)];
           }
           const f = v * sh * dt;
-          px[q] = clamp(base[0] * f, 0, 255); px[q+1] = clamp(base[1] * f, 0, 255); px[q+2] = clamp(base[2] * f, 0, 255);
-          // borde suavizado
-          px[q+3] = (x === a || x === b) ? 150 : 255;
+          const cal = 1 - f;
+          px[q] = clamp(base[0] * f * (1 + cal * 0.16), 0, 255); px[q+1] = clamp(base[1] * f * (1 + cal * 0.02), 0, 255); px[q+2] = clamp(base[2] * f * (1 - cal * 0.14), 0, 255);
         }
       }
       mc.putImageData(im, 0, yTop);
@@ -744,7 +819,7 @@
         mc.save();
         mc.globalCompositeOperation = 'source-atop';
         mc.lineCap = 'round';
-        const nVello = Math.round((yHem > 0 ? (bot - yHem) : 0) * Dp / (ppc * ppc) * 0.6);
+        const nVello = Math.round((yHem > 0 ? (bot - yHem) : 0) * Dp / (ppc * ppc) * 0.6 * clamp(ppc / 8, 0.3, 1));
         for (let i = 0; i < nVello; i++) {
           const fr = 0.06 + Math.random() * (hem - 0.06);
           const dens = fr < 0.27 ? 1 : 0.45;
@@ -996,7 +1071,7 @@
     pared();
     piso();
     const b = cuerpo();
-    if (foto) dibujarFoto(); else dibujarFigura(b);
+    if (modo() === 'foto' && foto) dibujarFoto(); else dibujarFigura(b);
     reglaVertical(60, 110, 'izq');
     reglaVertical(W - 170, 110, 'der');
 
@@ -1006,9 +1081,9 @@
     ctx.font = '36px Arial';
     ctx.fillText('Fecha: ' + (el('fecha').value || 'DD/MM/AA'), W / 2, 120);
 
-    const P = foto ? anclasFoto() : anclas(b);
+    const P = modo() === 'foto' && foto ? anclasFoto() : anclas(b);
     // Derecha/izquierda de la persona: de espalda coincide con la imagen, de frente se invierte
-    const frente = !!(foto && foto.frontal);
+    const frente = !!(modo() === 'foto' && foto && foto.frontal);
     const ladoPersona = l => frente ? (l === 'der' ? 'izq' : 'der') : l;
     const lista = [
       ['cuello',  'Perímetro cuello',  'izq'],
@@ -1073,6 +1148,26 @@
     };
     img.src = URL.createObjectURL(f);
   });
+  // Modo de imagen: foto real o solo color de piel
+  function modo() { const r = document.querySelector('input[name=modo]:checked'); return r ? r.value : 'foto'; }
+  document.querySelectorAll('input[name=modo]').forEach(r => r.addEventListener('change', () => {
+    el('bloqueFoto').hidden = modo() !== 'foto';
+    el('bloquePiel').hidden = modo() !== 'piel';
+    render();
+  }));
+  const estadoBrazo = el('estadoBrazo'), textoBrazo = estadoBrazo.textContent;
+  el('brazo').addEventListener('change', e => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    const img = new Image();
+    img.onload = () => {
+      try {
+        brazo = muestraBrazo(img);
+        estadoBrazo.textContent = 'Tono tomado del brazo. Ajusta "Luz" si la foto salió muy clara u oscura.';
+      } catch (err) { brazo = null; estadoBrazo.textContent = err.message || String(err); }
+      render();
+    };
+    img.src = URL.createObjectURL(f);
+  });
   el('quitarFoto').addEventListener('click', () => {
     foto = null; el('foto').value = ''; estado.textContent = textoEstado; render();
   });
@@ -1087,6 +1182,7 @@
     ['seudonimo'].concat(medidas).forEach(id => el(id).value = '');
     el('fecha').value = hoy();
     foto = null; el('foto').value = ''; estado.textContent = textoEstado;
+    brazo = null; el('brazo').value = ''; el('luz').value = 100; estadoBrazo.textContent = textoBrazo;
     render();
   });
 
