@@ -132,32 +132,34 @@
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, PISO_Y);
   }
 
+  // Piso en perspectiva. En la línea donde se para la persona, 1 cm = PX (igual que las reglas verticales);
+  // el borde delantero es la misma escala proyectada, así que se lee igual siguiendo las líneas del piso.
   function piso() {
-    const bL = 150, bR = 1250, fL = 20, fR = 1380, fY = 1555;
+    const X0 = CX - 90 * PX;                 // 0 cm en el plano de la persona (90 cm en el centro)
+    const fY = 1555, fL = 20, fR = W - 20;
+    const K = (CX - fL) / (CX - X0);         // ampliación del borde delantero
+    const xb = c => X0 + c * PX, xf = c => CX + (xb(c) - CX) * K;
     ctx.fillStyle = '#fafafa';
-    ctx.beginPath(); ctx.moveTo(bL, PISO_Y); ctx.lineTo(bR, PISO_Y); ctx.lineTo(fR, fY); ctx.lineTo(fL, fY); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(xb(0), PISO_Y); ctx.lineTo(xb(180), PISO_Y); ctx.lineTo(xf(180), fY); ctx.lineTo(xf(0), fY); ctx.closePath(); ctx.fill();
     ctx.strokeStyle = '#a0a0a0'; ctx.lineWidth = 1;
-    const n = 36;
-    for (let i = 0; i <= n; i++) {
-      const t = i / n;
-      ctx.beginPath(); ctx.moveTo(bL + (bR - bL) * t, PISO_Y); ctx.lineTo(fL + (fR - fL) * t, fY); ctx.stroke();
+    for (let c = 0; c <= 180; c += 5) {
+      ctx.beginPath(); ctx.moveTo(xb(c), PISO_Y); ctx.lineTo(xf(c), fY); ctx.stroke();
     }
     const m = 12;
     for (let j = 0; j <= m; j++) {
       const t = Math.pow(j / m, 1.6);
       const y = PISO_Y + (fY - PISO_Y) * t;
-      ctx.beginPath(); ctx.moveTo(bL + (fL - bL) * t, y); ctx.lineTo(bR + (fR - bR) * t, y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(xb(0) + (xf(0) - xb(0)) * t, y); ctx.lineTo(xb(180) + (xf(180) - xb(180)) * t, y); ctx.stroke();
     }
     ctx.strokeStyle = '#555'; ctx.fillStyle = '#333';
     ctx.font = 'italic 22px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    const total = 180;
-    for (let c = 0; c <= total; c++) {
-      const x = fL + (fR - fL) * (c / total);
+    for (let c = 0; c <= 180; c++) {
+      const x = xf(c);
       const largo = c % 10 === 0 ? 14 : (c % 5 === 0 ? 9 : 5);
       ctx.beginPath(); ctx.moveTo(x, fY); ctx.lineTo(x, fY + largo); ctx.stroke();
       if (c % 10 === 0) ctx.fillText(String(c), x, fY + 16);
     }
-    ctx.beginPath(); ctx.moveTo(fL, fY); ctx.lineTo(fR, fY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(xf(0), fY); ctx.lineTo(xf(180), fY); ctx.stroke();
   }
 
   function reglaVertical(x, ancho, lado) {
@@ -439,9 +441,10 @@
       const i = y * w + x; if (mask[i] === 2) { qr += d[i*4]; qg += d[i*4+1]; qb += d[i*4+2]; qn++; }
     }
     const pielCuello = qn > 20 ? [qr / qn, qg / qn, qb / qn] : piel;
+    const muestra = muestraPiel(c, mask, w, h, cx, bot, H);
     const frontal = nCara > w * h * 0.0008;
     const rostro = nCara > 0 ? { x0: fx0, x1: fx1, y0: fy0, y1: fy1 } : null;
-    return { canvas: c, mask, w, h, top, bot, corona, cx, cxCuello, conCabeza, frontal, piel, pielCuello, rostro };
+    return { canvas: c, mask, w, h, top, bot, corona, cx, cxCuello, conCabeza, frontal, piel: muestra ? muestra.color : piel, pielCuello, muestra, rostro };
   }
 
   const rgb = (p, f) => 'rgb(' + p.map(v => Math.round(clamp(v * f, 0, 255))).join(',') + ')';
@@ -491,7 +494,10 @@
       for (let x = 0; x < f.w; x++) {
         const i = y * f.w + x, p = i * 4, cc = mask[i];
         if (cc === 0) { d[p+3] = 0; continue; }
-        if (debajo) { cuerpoBajo++; if (cc === 4 || cc === 5) ropaBajo++; }
+        if (debajo) {
+          cuerpoBajo++; if (cc === 4 || cc === 5) ropaBajo++;
+          if (cc !== 2 || y + pad > yF(0.30)) { d[p+3] = 0; continue; }
+        }
         if (cc === 4) {
           if (debajo || fueraDelShort(x, y + pad)) { d[p+3] = 0; continue; }
           const lum = 0.3 * d[p] + 0.59 * d[p+1] + 0.11 * d[p+2];
@@ -523,7 +529,7 @@
 
     // 2) Piernas descubiertas y pies descalzos, debajo de la capa de la foto
     const piernasFalsas = cuerpoBajo > 0 && ropaBajo / cuerpoBajo > 0.3;
-    if (centros) dibujarPiernas(o, centros, { yF, yHem, bot, ppc, piel, D: med('muslo') / Math.PI, frontal: f.frontal, soloPies: !piernasFalsas });
+    if (centros) dibujarPiernas(o, centros, { yF, yHem, bot, ppc, piel, muestra: f.muestra, sexo, D: med('muslo') / Math.PI, frontal: f.frontal, soloPies: !piernasFalsas });
 
     o.drawImage(capa, 0, pad);
 
@@ -575,59 +581,144 @@
     return { filas, en: (y, k) => filas[clamp(Math.round(y - filas[0].y), 0, filas.length - 1)][k] };
   }
 
+  // Muestra de la piel real de la persona (zona lumbar): color y textura para completar las piernas
+  function muestraPiel(c, mask, w, h, cx, bot, H) {
+    const d = c.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
+    const y0 = Math.round(bot - 0.75 * H), y1 = Math.round(bot - 0.63 * H);
+    const half = Math.round(0.045 * H);
+    const x0 = Math.max(0, Math.round(cx - half)), x1 = Math.min(w - 1, Math.round(cx + half));
+    const pw = x1 - x0 + 1, ph = y1 - y0 + 1;
+    if (pw < 8 || ph < 8 || y0 < 0) return null;
+    const R = [], G = [], B = [];
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+      const i = y * w + x; if (mask[i] !== 2) continue;
+      R.push(d[i*4]); G.push(d[i*4+1]); B.push(d[i*4+2]);
+    }
+    if (R.length < pw * ph * 0.5) return null;
+    const med = a => { a.sort((p, q) => p - q); return a[a.length >> 1]; };
+    const color = [med(R), med(G), med(B)];
+    // Detalle fino (poros, lunares suaves): la foto dividida por su versión desenfocada
+    const lum = new Float32Array(pw * ph);
+    for (let y = 0; y < ph; y++) for (let x = 0; x < pw; x++) {
+      const i = (y0 + y) * w + x0 + x;
+      lum[y * pw + x] = mask[i] === 2 ? 0.3 * d[i*4] + 0.59 * d[i*4+1] + 0.11 * d[i*4+2] : -1;
+    }
+    const r = Math.max(2, Math.round(pw / 14)), det = new Float32Array(pw * ph);
+    for (let y = 0; y < ph; y++) for (let x = 0; x < pw; x++) {
+      let s = 0, n = 0;
+      for (let j = Math.max(0, y - r); j <= Math.min(ph - 1, y + r); j += 2)
+        for (let k = Math.max(0, x - r); k <= Math.min(pw - 1, x + r); k += 2) { const v = lum[j * pw + k]; if (v >= 0) { s += v; n++; } }
+      const v = lum[y * pw + x];
+      det[y * pw + x] = v >= 0 && n ? 1 + (clamp(v / (s / n), 0.86, 1.12) - 1) * 0.55 : 1;
+    }
+    return { color, det, pw, ph };
+  }
+
+  // Piernas con proporciones reales vistas de espalda (o de frente) y piel de la propia persona
   function dibujarPiernas(o, C, op) {
-    const { yF, yHem, bot, ppc, piel, D, frontal, soloPies } = op;
+    const { yF, yHem, bot, ppc, piel, muestra, D, frontal, soloPies, sexo } = op;
     const Dp = D * ppc;
+    const hem = HEM[sexo];
+    // [fracción de estatura, semiancho externo, semiancho interno] en unidades del diámetro del muslo
     const perfil = [
-      [HEM[el('sexo').value] + 0.03, 0.98], [0.40, 0.90], [0.34, 0.77], [0.29, 0.64], [0.255, 0.65],
-      [0.21, 0.72], [0.17, 0.68], [0.12, 0.52], [0.08, 0.42], [0.05, 0.38]
+      [hem + 0.035, 0.53, 0.50], [hem, 0.51, 0.47], [0.37, 0.47, 0.42], [0.335, 0.42, 0.37],
+      [0.30, 0.37, 0.33], [0.28, 0.35, 0.315], [0.26, 0.34, 0.31], [0.235, 0.37, 0.355],
+      [0.21, 0.395, 0.40], [0.185, 0.375, 0.415], [0.16, 0.33, 0.37], [0.13, 0.27, 0.29],
+      [0.10, 0.215, 0.225], [0.07, 0.19, 0.19], [0.05, 0.195, 0.20], [0.038, 0.215, 0.225]
     ];
-    const capas = [];
+    const pie = frontal
+      ? [[0.025, 0.27, 0.25], [0.012, 0.31, 0.28], [0.003, 0.32, 0.29]]
+      : [[0.025, 0.225, 0.23], [0.012, 0.235, 0.24], [0.003, 0.215, 0.22]];
+    const filas = (soloPies ? perfil.filter(p => p[0] <= 0.07) : perfil).concat(pie);
+    const base = muestra ? muestra.color : piel;
+    const pelo = base.map(v => v * 0.32);
+    const W2 = o.canvas.width, H2 = o.canvas.height;
+
+    // Sombra suave en el piso
+    o.save(); o.fillStyle = 'rgba(0,0,0,0.08)';
+    const xl = C.en(bot, 'l'), xr = C.en(bot, 'r');
+    o.beginPath(); o.ellipse((xl + xr) / 2, bot - Dp * 0.03, Math.abs(xr - xl) / 2 + Dp * 0.45, Dp * 0.1, 0, 0, Math.PI * 2); o.fill();
+    o.restore();
+
     ['l', 'r'].forEach(k => {
-      const capa = document.createElement('canvas'); capa.width = o.canvas.width; capa.height = o.canvas.height;
-      const c = capa.getContext('2d'); capas.push(capa);
       const s = k === 'l' ? -1 : 1;
-      const pts = [];
-      if (!soloPies) perfil.forEach(([fr, fw]) => { if (fr <= HEM[el('sexo').value] + 0.03) { const y = yF(fr); pts.push([C.en(y, k), y, fw * Dp]); } });
-      // Pie descalzo: talón (espalda) o empeine y dedos (frente)
-      const ya = yF(0.05), xa = C.en(ya, k), aw = 0.38 * Dp;
-      const pie = frontal
-        ? [[xa, yF(0.06), aw], [xa + s * aw * 0.05, yF(0.035), aw * 1.15], [xa + s * aw * 0.12, yF(0.015), aw * 1.45], [xa + s * aw * 0.15, bot - Dp * 0.06, aw * 1.5]]
-        : [[xa, yF(0.06), aw], [xa, yF(0.035), aw * 1.06], [xa, yF(0.016), aw * 1.2], [xa, bot - Dp * 0.06, aw * 1.12]];
-      c.fillStyle = rgb(piel, 1);
-      if (pts.length) extremidad(c, pts.concat(pie.slice(1)));
-      extremidad(c, pie);
-      // Volumen: bordes en sombra, centro con luz suave
-      const xm = C.en(yF(0.25), k), wm = 0.75 * Dp;
-      c.save(); c.globalCompositeOperation = 'source-atop';
-      const g = c.createLinearGradient(xm - wm, 0, xm + wm, 0);
-      g.addColorStop(0, rgb(piel, 0.62)); g.addColorStop(0.22, rgb(piel, 0.86));
-      g.addColorStop(0.45, rgb(piel, 1.04)); g.addColorStop(0.62, rgb(piel, 1.0));
-      g.addColorStop(0.8, rgb(piel, 0.84)); g.addColorStop(1, rgb(piel, 0.6));
-      c.fillStyle = g; c.fillRect(xm - wm * 1.6, yF(HEM[el('sexo').value] + 0.04), wm * 3.2, bot);
-      if (!soloPies) {
-        // Sombra bajo el short y pliegue detrás de la rodilla
-        const yh = yHem, gh = c.createLinearGradient(0, yh - Dp * 0.1, 0, yh + Dp * 0.5);
-        gh.addColorStop(0, 'rgba(0,0,0,0.45)'); gh.addColorStop(1, 'rgba(0,0,0,0)');
-        c.fillStyle = gh; c.fillRect(xm - wm * 1.6, yh - Dp * 0.1, wm * 3.2, Dp * 0.6);
-        if (!frontal) {
-          const yk = yF(0.275), xk = C.en(yk, k);
-          c.strokeStyle = 'rgba(70,40,25,0.22)'; c.lineWidth = Math.max(1, Dp * 0.035);
-          c.beginPath(); c.moveTo(xk - Dp * 0.22, yk + Dp * 0.02); c.quadraticCurveTo(xk, yk - Dp * 0.05, xk + Dp * 0.22, yk + Dp * 0.02); c.stroke();
+      const cHem = C.en(yHem, k), cAnk = C.en(yF(0.05), k);
+      // Eje anatómico: muslos que convergen a la rodilla, pierna casi vertical
+      const eje = fr => {
+        const t = clamp((hem + 0.035 - fr) / (hem + 0.035 - 0.05), 0, 1);
+        const lin = cHem + (cAnk - cHem) * t;
+        const rodilla = Math.sin(Math.PI * clamp((hem + 0.035 - fr) / (hem + 0.035 - 0.12), 0, 1)) * 0.05 * Dp;
+        return lin - s * rodilla + s * 0.03 * Dp * (1 - t);
+      };
+      const ext = [], int = [];
+      filas.forEach(([fr, a, b]) => {
+        const y = fr < 0.004 ? bot - 1 : yF(fr), x = eje(fr);
+        ext.push([x + s * a * Dp, y]); int.push([x - s * b * Dp, y]);
+      });
+      const m = document.createElement('canvas'); m.width = W2; m.height = H2;
+      const mc = m.getContext('2d', { willReadFrequently: true });
+      mc.fillStyle = '#fff';
+      curvaCerrada(mc, ext.concat(int.reverse()));
+      const yTop = Math.max(0, Math.floor(filas[0][0] < 0.004 ? bot : yF(filas[0][0])) - 2);
+      const yBot = Math.min(H2 - 1, Math.ceil(bot) + 1);
+      const im = mc.getImageData(0, yTop, W2, yBot - yTop + 1), px = im.data;
+      for (let yy = 0; yy <= yBot - yTop; yy++) {
+        const y = yTop + yy, fr = (bot - y) / (bot - yF(1)) ;
+        let a = -1, b = -1;
+        for (let x = 0; x < W2; x++) if (px[(yy * W2 + x) * 4 + 3] > 0) { if (a < 0) a = x; b = x; }
+        if (a < 0) continue;
+        // Sombra bajo el short, pliegue detrás de la rodilla, talón un poco más claro
+        let v = 1;
+        if (!soloPies) v *= 1 - 0.38 * Math.exp(-Math.max(0, y - yHem) / (1.6 * ppc));
+        if (fr < 0.03) v *= 1.03;
+        for (let x = a; x <= b; x++) {
+          const q = (yy * W2 + x) * 4; if (px[q+3] === 0) continue;
+          const u = (x - a) / Math.max(1, b - a);
+          // Volumen cilíndrico con luz suave desde arriba a la izquierda
+          let sh = 0.78 + 0.28 * Math.pow(Math.sin(Math.PI * u), 0.65) + 0.04 * (0.5 - u);
+          if (!frontal) sh *= 1 - 0.08 * Math.exp(-Math.pow((fr - 0.272) / 0.005, 2)) * Math.pow(Math.sin(Math.PI * u), 2);
+          if (!frontal && fr > 0.15 && fr < 0.25) {
+            // dos cabezas del gemelo
+            const g = Math.exp(-Math.pow((u - 0.32) / 0.14, 2)) * Math.exp(-Math.pow((fr - 0.20) / 0.03, 2))
+                    + Math.exp(-Math.pow((u - 0.68) / 0.14, 2)) * Math.exp(-Math.pow((fr - 0.19) / 0.03, 2));
+            sh += 0.04 * g;
+          }
+          let dt = 1;
+          if (muestra) {
+            const mir = (i, n) => { i = ((i % (2 * n)) + 2 * n) % (2 * n); return i < n ? i : 2 * n - 1 - i; };
+            dt = muestra.det[mir(y, muestra.ph) * muestra.pw + mir(x + (k === 'l' ? 0 : 37), muestra.pw)];
+          }
+          const f = v * sh * dt;
+          px[q] = clamp(base[0] * f, 0, 255); px[q+1] = clamp(base[1] * f, 0, 255); px[q+2] = clamp(base[2] * f, 0, 255);
+          // borde suavizado
+          px[q+3] = (x === a || x === b) ? 150 : 255;
         }
       }
-      // Planta apoyada
-      const gp = c.createLinearGradient(0, bot - Dp * 0.2, 0, bot);
-      gp.addColorStop(0, 'rgba(0,0,0,0)'); gp.addColorStop(1, 'rgba(60,35,25,0.35)');
-      c.fillStyle = gp; c.fillRect(xa - aw * 2, bot - Dp * 0.2, aw * 4, Dp * 0.2);
-      c.restore();
-      textura(c);
+      mc.putImageData(im, 0, yTop);
+      // Vello: poco y fino, más en la pantorrilla que en el muslo
+      if (!soloPies) {
+        mc.save();
+        mc.globalCompositeOperation = 'source-atop';
+        mc.lineCap = 'round';
+        const nVello = Math.round((yHem > 0 ? (bot - yHem) : 0) * Dp / (ppc * ppc) * 0.6);
+        for (let i = 0; i < nVello; i++) {
+          const fr = 0.06 + Math.random() * (hem - 0.06);
+          const dens = fr < 0.27 ? 1 : 0.45;
+          if (Math.random() > dens) continue;
+          const y = yF(fr), xc = eje(fr);
+          const x = xc + (Math.random() - 0.5) * 0.8 * Dp;
+          const len = (0.35 + Math.random() * 0.45) * ppc;
+          const ang = Math.PI / 2 + s * (0.25 + Math.random() * 0.35) * (x > xc === (s > 0) ? 1 : -0.6);
+          mc.strokeStyle = 'rgba(' + pelo.map(Math.round).join(',') + ',' + (0.18 + Math.random() * 0.22).toFixed(2) + ')';
+          mc.lineWidth = Math.max(0.5, ppc * 0.045);
+          mc.beginPath(); mc.moveTo(x, y);
+          mc.quadraticCurveTo(x + Math.cos(ang) * len * 0.5 + s * len * 0.1, y + Math.sin(ang) * len * 0.5, x + Math.cos(ang) * len, y + Math.sin(ang) * len);
+          mc.stroke();
+        }
+        mc.restore();
+      }
+      o.drawImage(m, 0, 0);
     });
-    // Sombra suave en el piso
-    o.save(); o.fillStyle = 'rgba(0,0,0,0.10)';
-    o.beginPath(); o.ellipse((C.en(bot, 'l') + C.en(bot, 'r')) / 2, bot - Dp * 0.04, Math.abs(C.en(bot, 'r') - C.en(bot, 'l')) / 2 + Dp * 0.5, Dp * 0.12, 0, 0, Math.PI * 2); o.fill();
-    o.restore();
-    capas.forEach(cp => o.drawImage(cp, 0, 0));
   }
 
   // Grano suave de piel para que lo dibujado no se vea plástico
@@ -667,20 +758,48 @@
     g.addColorStop(0, rgb(piel, 0.7)); g.addColorStop(0.3, 'rgba(0,0,0,0)'); g.addColorStop(0.7, 'rgba(0,0,0,0)'); g.addColorStop(1, rgb(piel, 0.7));
     c.fillStyle = g; c.fillRect(cx - nw * 1.5, hy - ry * 1.2, nw * 3, yF(0.82) - hy + ry * 1.2);
     c.restore();
-    // Cabello corto de espalda (cubre la cabeza, nuca a la vista)
-    const pelo = '#2a211c';
-    c.fillStyle = pelo;
-    c.beginPath();
-    c.moveTo(cx - rx * 1.03, hy + ry * 0.12);
-    c.bezierCurveTo(cx - rx * 1.16, hy - ry * 1.4, cx + rx * 1.16, hy - ry * 1.4, cx + rx * 1.03, hy + ry * 0.12);
-    c.quadraticCurveTo(cx + rx * 0.95, hy + ry * 0.55, cx + rx * 0.55, hy + ry * 0.72);
-    c.quadraticCurveTo(cx, hy + ry * 0.84, cx - rx * 0.55, hy + ry * 0.72);
-    c.quadraticCurveTo(cx - rx * 0.95, hy + ry * 0.55, cx - rx * 1.03, hy + ry * 0.15);
-    c.closePath(); c.fill();
-    const gl = c.createRadialGradient(cx - rx * 0.25, hy - ry * 0.55, 0, cx, hy, ry * 1.1);
-    gl.addColorStop(0, 'rgba(255,255,255,0.10)'); gl.addColorStop(1, 'rgba(0,0,0,0.15)');
-    c.save(); c.globalCompositeOperation = 'source-atop'; c.fillStyle = gl;
-    c.beginPath(); c.ellipse(cx, hy, rx * 1.1, ry * 1.1, 0, 0, Math.PI * 2); c.fill(); c.restore();
+    // Cabello corto de espalda: base oscura con algo de cuero cabelludo y hebras que salen de la coronilla
+    const camino = new Path2D();
+    camino.moveTo(cx - rx * 1.03, hy + ry * 0.12);
+    camino.bezierCurveTo(cx - rx * 1.16, hy - ry * 1.4, cx + rx * 1.16, hy - ry * 1.4, cx + rx * 1.03, hy + ry * 0.12);
+    camino.quadraticCurveTo(cx + rx * 0.95, hy + ry * 0.55, cx + rx * 0.55, hy + ry * 0.72);
+    camino.quadraticCurveTo(cx, hy + ry * 0.84, cx - rx * 0.55, hy + ry * 0.72);
+    camino.quadraticCurveTo(cx - rx * 0.95, hy + ry * 0.55, cx - rx * 1.03, hy + ry * 0.12);
+    camino.closePath();
+    const P0 = [42, 33, 27];
+    c.fillStyle = rgb(P0.map((v, i) => v * 0.72 + piel[i] * 0.28), 1);
+    c.fill(camino);
+    const corX = cx + rx * 0.08, corY = hy - ry * 0.55;     // remolino
+    const hebra = (x, y, len, alfa) => {
+      let ang = Math.atan2(y - corY, x - corX) + 0.35;
+      const dd = Math.hypot(x - corX, y - corY) / ry;
+      if (dd < 0.08) ang = Math.random() * Math.PI * 2;
+      ang = ang * (1 - Math.min(1, dd) * 0.35) + (Math.PI / 2) * Math.min(1, dd) * 0.35;
+      const tono = 0.6 + Math.random() * 0.8;
+      c.strokeStyle = 'rgba(' + P0.map(v => Math.round(v * tono)).join(',') + ',' + alfa.toFixed(2) + ')';
+      c.lineWidth = Math.max(0.6, ppc * (0.05 + Math.random() * 0.04));
+      c.beginPath(); c.moveTo(x, y);
+      c.quadraticCurveTo(x + Math.cos(ang + 0.2) * len * 0.5, y + Math.sin(ang + 0.2) * len * 0.5, x + Math.cos(ang) * len, y + Math.sin(ang) * len);
+      c.stroke();
+    };
+    c.save(); c.clip(camino); c.lineCap = 'round';
+    const nH = Math.round(rx * ry * 2.2);
+    for (let i = 0; i < nH; i++) {
+      const x = cx + (Math.random() * 2 - 1) * rx * 1.1, y = hy + (Math.random() * 2.2 - 1.3) * ry;
+      hebra(x, y, (0.5 + Math.random() * 0.7) * ppc, 0.35 + Math.random() * 0.45);
+    }
+    const gl = c.createRadialGradient(cx - rx * 0.3, hy - ry * 0.6, 0, cx, hy, ry * 1.15);
+    gl.addColorStop(0, 'rgba(255,255,255,0.10)'); gl.addColorStop(0.6, 'rgba(0,0,0,0)'); gl.addColorStop(1, 'rgba(0,0,0,0.25)');
+    c.fillStyle = gl; c.fillRect(cx - rx * 1.3, hy - ry * 1.3, rx * 2.6, ry * 2.6);
+    c.restore();
+    // Nacimiento del pelo en la nuca y patillas: hebras finas que se desvanecen sobre la piel
+    c.lineCap = 'round';
+    for (let i = 0; i < rx * 3; i++) {
+      const t = Math.random() * 2 - 1;
+      const x = cx + t * rx * 0.75;
+      const y = hy + ry * (0.84 - 0.12 * t * t - 0.05) + Math.random() * ry * 0.06;
+      hebra(x, y, (0.2 + Math.random() * 0.35) * ppc, 0.15 + Math.random() * 0.25);
+    }
     textura(c);
     // El cuello se dibuja detrás y una copia desvanecida encima para unir con la espalda
     const encima = document.createElement('canvas'); encima.width = tmp.width; encima.height = tmp.height;
@@ -800,8 +919,7 @@
     ctx.font = 'bold 50px Arial';
     ctx.fillText(el('seudonimo').value || '[ Seudónimo ]', W / 2, 72);
     ctx.font = '36px Arial';
-    const alt = num('altura');
-    ctx.fillText('Fecha: ' + (el('fecha').value || 'DD/MM/AA') + (alt ? '   ·   Estatura: ' + fmt(alt) + ' cm' : ''), W / 2, 120);
+    ctx.fillText('Fecha: ' + (el('fecha').value || 'DD/MM/AA'), W / 2, 120);
 
     const P = foto ? anclasFoto() : anclas(b);
     const lista = [
